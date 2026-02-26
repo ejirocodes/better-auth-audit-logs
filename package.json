@@ -1,6 +1,6 @@
 {
   "name": "better-auth-audit-logs",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Audit log plugin for Better Auth. Captures auth lifecycle events, stores structured log entries, and exposes query endpoints with PII redaction and custom storage backends.",
   "type": "module",
   "license": "MIT",
@@ -42,7 +42,9 @@
   },
   "typesVersions": {
     "*": {
-      "client": ["./dist/client.d.ts"]
+      "client": [
+        "./dist/client.d.ts"
+      ]
     }
   },
   "files": [
