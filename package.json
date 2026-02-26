@@ -1,7 +1,31 @@
 {
   "name": "better-auth-audit-logs",
   "version": "0.1.0",
+  "description": "Audit log plugin for Better Auth. Captures auth lifecycle events, stores structured log entries, and exposes query endpoints with PII redaction and custom storage backends.",
   "type": "module",
+  "license": "MIT",
+  "author": "Ejiro Asiuwhu <ejiroasiuwhu10@gmail.com>",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ejirocodes/better-auth-audit-logs"
+  },
+  "homepage": "https://github.com/ejirocodes/better-auth-audit-logs#readme",
+  "bugs": {
+    "url": "https://github.com/ejirocodes/better-auth-audit-logs/issues"
+  },
+  "keywords": [
+    "better-auth",
+    "better-auth-plugin",
+    "audit-log",
+    "audit-trail",
+    "auth",
+    "authentication",
+    "security",
+    "logging",
+    "compliance",
+    "pii-redaction",
+    "session-tracking"
+  ],
   "main": "./dist/index.cjs",
   "types": "./dist/index.d.ts",
   "exports": {
