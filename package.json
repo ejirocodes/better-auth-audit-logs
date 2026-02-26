@@ -7,6 +7,11 @@
     ".": "./src/index.ts",
     "./client": "./src/client.ts"
   },
+  "scripts": {
+    "test": "bun test",
+    "typecheck": "tsc --noEmit",
+    "check": "tsc --noEmit && bun test"
+  },
   "peerDependencies": {
     "better-auth": ">=1.0.0",
     "zod": ">=3.0.0",
