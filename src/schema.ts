@@ -3,6 +3,7 @@ import type { AuditLogOptions } from "./types";
 
 export const baseSchema = {
   auditLog: {
+    modelName: "audit_log",
     fields: {
       userId: {
         type: "string" as const,
@@ -59,5 +60,5 @@ export function buildSchema(options?: AuditLogOptions) {
 }
 
 export function getModelName(options?: AuditLogOptions): string {
-  return options?.schema?.auditLog?.modelName ?? "auditLog";
+  return options?.schema?.auditLog?.modelName ?? "audit_log";
 }

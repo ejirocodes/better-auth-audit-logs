@@ -80,7 +80,7 @@ describe("auditLog plugin", () => {
   test("schema respects custom model name", () => {
     const plugin = auditLog({ schema: { auditLog: { modelName: "audit_events" } } });
     const modelName =
-      (plugin.schema.auditLog as { modelName?: string }).modelName ?? "auditLog";
+      (plugin.schema.auditLog as { modelName?: string }).modelName ?? "audit_log";
     expect(modelName).toBe("audit_events");
   });
 
