@@ -10,7 +10,9 @@
         "zod": "^4.3.6",
       },
       "peerDependencies": {
+        "better-auth": ">=1.0.0",
         "typescript": "^5",
+        "zod": ">=3.0.0",
       },
     },
   },
