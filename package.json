@@ -3,16 +3,18 @@
   "version": "0.1.0",
   "type": "module",
   "module": "src/index.ts",
-  "main": "./dist/index.js",
+  "main": "./dist/index.cjs",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "bun": "./src/index.ts",
+      "require": "./dist/index.cjs",
       "import": "./dist/index.js",
       "types": "./dist/index.d.ts"
     },
     "./client": {
       "bun": "./src/client.ts",
+      "require": "./dist/client.cjs",
       "import": "./dist/client.js",
       "types": "./dist/client.d.ts"
     }
@@ -22,7 +24,7 @@
     "src"
   ],
   "scripts": {
-    "build": "bun build src/index.ts src/client.ts --outdir dist --target bun && tsc -p tsconfig.build.json",
+    "build": "bun build src/index.ts src/client.ts --outdir dist --target node && bun build src/index.ts src/client.ts --outdir dist --target node --format cjs --entry-naming '[dir]/[name].cjs' && tsc -p tsconfig.build.json",
     "test": "bun test",
     "typecheck": "tsc --noEmit",
     "check": "tsc --noEmit && bun test"
