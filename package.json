@@ -1,11 +1,20 @@
 {
   "name": "better-auth-audit-log",
-  "module": "index.ts",
+  "version": "0.1.0",
   "type": "module",
-  "devDependencies": {
-    "@types/bun": "latest"
+  "module": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./client": "./src/client.ts"
   },
   "peerDependencies": {
+    "better-auth": ">=1.0.0",
+    "zod": ">=3.0.0",
     "typescript": "^5"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "better-auth": "^1.4.19",
+    "zod": "^4.3.6"
   }
 }
