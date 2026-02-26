@@ -83,7 +83,7 @@ export interface ResolvedOptions {
   nonBlocking: boolean;
   storage: AuditLogStorage | undefined;
   capture: Required<CaptureOptions>;
-  piiRedaction: Required<PIIRedactionOptions>;
+  piiRedaction: { enabled: boolean; fields?: string[]; strategy: PIIStrategy };
   retention: RetentionConfig | undefined;
   beforeLog: AuditLogOptions["beforeLog"];
   afterLog: AuditLogOptions["afterLog"];
