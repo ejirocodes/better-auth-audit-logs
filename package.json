@@ -1,30 +1,31 @@
 {
-  "name": "better-auth-audit-log",
+  "name": "better-auth-audit-logs",
   "version": "0.1.0",
   "type": "module",
-  "module": "src/index.ts",
   "main": "./dist/index.cjs",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "bun": "./src/index.ts",
       "require": "./dist/index.cjs",
       "import": "./dist/index.js",
       "types": "./dist/index.d.ts"
     },
     "./client": {
-      "bun": "./src/client.ts",
       "require": "./dist/client.cjs",
       "import": "./dist/client.js",
       "types": "./dist/client.d.ts"
     }
   },
+  "typesVersions": {
+    "*": {
+      "client": ["./dist/client.d.ts"]
+    }
+  },
   "files": [
-    "dist",
-    "src"
+    "dist"
   ],
   "scripts": {
-    "build": "bun build src/index.ts src/client.ts --outdir dist --target node && bun build src/index.ts src/client.ts --outdir dist --target node --format cjs --entry-naming '[dir]/[name].cjs' && tsc -p tsconfig.build.json",
+    "build": "bun build src/index.ts src/client.ts --outdir dist --target node --external better-auth --external zod && bun build src/index.ts src/client.ts --outdir dist --target node --format cjs --entry-naming '[dir]/[name].cjs' --external better-auth --external zod && tsc -p tsconfig.build.json",
     "test": "bun test",
     "typecheck": "tsc --noEmit",
     "check": "tsc --noEmit && bun test"
