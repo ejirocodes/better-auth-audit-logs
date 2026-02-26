@@ -1,5 +1,9 @@
 # better-auth-audit-logs
 
+[![npm version](https://img.shields.io/npm/v/better-auth-audit-logs)](https://www.npmjs.com/package/better-auth-audit-logs)
+[![npm downloads](https://img.shields.io/npm/dm/better-auth-audit-logs)](https://www.npmjs.com/package/better-auth-audit-logs)
+[![license](https://img.shields.io/npm/l/better-auth-audit-logs)](https://github.com/ejirocodes/better-auth-audit-logs/blob/main/LICENSE)
+
 Audit log plugin for [Better Auth](https://better-auth.com). Captures auth lifecycle events, stores structured log entries with IP and user agent, and exposes query endpoints — with PII redaction, custom storage backends, and a manual insertion escape hatch.
 
 ## Requirements
@@ -364,3 +368,7 @@ auditLog({
   },
 })
 ```
+
+## License
+
+[MIT](./LICENSE)
