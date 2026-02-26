@@ -1,4 +1,4 @@
-# better-auth-audit-log
+# better-auth-audit-logs
 
 Audit log plugin for [Better Auth](https://better-auth.com). Captures auth lifecycle events, stores structured log entries with IP and user agent, and exposes query endpoints — with PII redaction, custom storage backends, and a manual insertion escape hatch.
 
@@ -11,16 +11,16 @@ Audit log plugin for [Better Auth](https://better-auth.com). Captures auth lifec
 
 ```bash
 # npm
-npm install better-auth-audit-log
+npm install better-auth-audit-logs
 
 # pnpm
-pnpm add better-auth-audit-log
+pnpm add better-auth-audit-logs
 
 # yarn
-yarn add better-auth-audit-log
+yarn add better-auth-audit-logs
 
 # bun
-bun add better-auth-audit-log
+bun add better-auth-audit-logs
 ```
 
 ## Setup
@@ -29,7 +29,7 @@ bun add better-auth-audit-log
 
 ```ts
 import { betterAuth } from "better-auth";
-import { auditLog } from "better-auth-audit-log";
+import { auditLog } from "better-auth-audit-logs";
 
 export const auth = betterAuth({
   // ...
@@ -49,7 +49,7 @@ This adds an `audit_log` table to your database. All columns are indexed for eff
 
 ```ts
 import { createAuthClient } from "better-auth/client";
-import { auditLogClient } from "better-auth-audit-log/client";
+import { auditLogClient } from "better-auth-audit-logs/client";
 
 export const authClient = createAuthClient({
   plugins: [auditLogClient()],
@@ -203,7 +203,7 @@ auditLog({
 Route log writes to any external backend by implementing `AuditLogStorage`:
 
 ```ts
-import { auditLog, type AuditLogStorage } from "better-auth-audit-log";
+import { auditLog, type AuditLogStorage } from "better-auth-audit-logs";
 
 const clickhouse: AuditLogStorage = {
   async write(entry) {
@@ -234,7 +234,7 @@ An in-memory adapter included for unit tests:
 
 ```ts
 import { betterAuth } from "better-auth";
-import { auditLog, MemoryStorage } from "better-auth-audit-log";
+import { auditLog, MemoryStorage } from "better-auth-audit-logs";
 
 const storage = new MemoryStorage();
 
@@ -307,7 +307,7 @@ import type {
   AuditLogOptions,
   StorageReadOptions,
   StorageReadResult,
-} from "better-auth-audit-log";
+} from "better-auth-audit-logs";
 
 interface AuditLogEntry {
   id: string;
