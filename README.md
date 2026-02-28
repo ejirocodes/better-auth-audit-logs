@@ -369,6 +369,15 @@ auditLog({
 })
 ```
 
+## Acknowledgments
+
+This plugin was inspired by and builds upon the audit log design shared by [@Re4GD](https://github.com/Re4GD) in [better-auth/better-auth#1184](https://github.com/better-auth/better-auth/issues/1184). Key ideas such as the plugin configuration shape, `nonBlocking` mode, `PathConfig` types, path normalization (`/sign-in/email` to `sign-in:email`), and several other design decisions originated from their work. Thank you for the foundational contribution.
+
+Additional inspiration and prior art from the community:
+
+- [@issamwahbi](https://github.com/issamwahbi) — [Add Support for Audit Logs](https://github.com/better-auth/better-auth/discussions/3592), an early discussion on building an audit log plugin with before/after hook patterns for capturing session-destructive events.
+- [@ItsProless](https://github.com/ItsProless) — [RFC: Audit Log plugin (SOC 2 / ISO 27001)?](https://github.com/better-auth/better-auth/discussions/7952), a detailed RFC proposing standardized audit metadata, storage-agnostic adapters, PII redaction, and compliance-oriented event schemas.
+
 ## License
 
 [MIT](./LICENSE)
