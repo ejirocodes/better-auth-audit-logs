@@ -41,6 +41,7 @@ function resolveOptions(options?: AuditLogOptions): ResolvedOptions {
     retention: options?.retention,
     beforeLog: options?.beforeLog,
     afterLog: options?.afterLog,
+    onWriteError: options?.onWriteError,
     shouldCapture: (path: string) => !hasPaths || pathsMap.has(path),
     getPathConfig: (path: string) => pathsMap.get(path),
   };

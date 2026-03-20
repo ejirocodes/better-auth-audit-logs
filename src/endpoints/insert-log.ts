@@ -1,6 +1,6 @@
-import { createAuthEndpoint, sessionMiddleware } from "better-auth/api";
+import { createAuthEndpoint, sessionMiddleware, APIError } from "better-auth/api";
 import { z } from "zod";
-import type { AuditLogSeverity, AuditLogStatus, ResolvedOptions } from "../types";
+import type { ResolvedOptions } from "../types";
 import { buildLogEntryFromAction, writeEntry } from "../internal";
 
 export function createInsertLogEndpoint(opts: ResolvedOptions, modelName: string) {
@@ -20,26 +20,29 @@ export function createInsertLogEndpoint(opts: ResolvedOptions, modelName: string
       const session = ctx.context.session;
       const { action, status, severity, metadata } = ctx.body;
 
-      const entry = await buildLogEntryFromAction(
-        action,
-        status as AuditLogStatus,
-        {
+      try {
+        const entry = await buildLogEntryFromAction(action, status, {
           userId: session.user.id,
           request: ctx.request,
           headers: ctx.headers,
-          metadata: metadata as Record<string, unknown>,
+          metadata,
           options: opts,
           authOptions: ctx.context.options,
-        },
-      );
+        });
 
-      if (severity) {
-        entry.severity = severity as AuditLogSeverity;
+        if (severity) {
+          entry.severity = severity;
+        }
+
+        await writeEntry(ctx, entry, opts, modelName);
+
+        return ctx.json({ success: true });
+      } catch (err) {
+        if (err instanceof APIError) throw err;
+        throw new APIError("INTERNAL_SERVER_ERROR", {
+          message: "Failed to insert audit log entry",
+        });
       }
-
-      await writeEntry(ctx, entry, opts, modelName);
-
-      return ctx.json({ success: true });
     },
   );
 }
