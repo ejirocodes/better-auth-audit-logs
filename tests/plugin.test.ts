@@ -1,7 +1,14 @@
 import { describe, test, expect } from "bun:test";
 import { auditLog } from "../src/plugin";
-import { BEFORE_PATHS } from "../src/hooks/before";
 import type { HookEndpointContext } from "@better-auth/core";
+
+const DEFAULT_BEFORE_PATHS = [
+  "/sign-out",
+  "/delete-user",
+  "/revoke-session",
+  "/revoke-sessions",
+  "/revoke-other-sessions",
+];
 
 function makeContext(path: string): HookEndpointContext {
   return {
@@ -22,10 +29,10 @@ describe("auditLog plugin", () => {
     expect(plugin.endpoints.insertAuditLog).toBeDefined();
   });
 
-  test("before hook matcher fires for all BEFORE_PATHS", () => {
+  test("before hook matcher fires for all default before paths", () => {
     const plugin = auditLog();
     const [hook] = plugin.hooks.before;
-    for (const path of BEFORE_PATHS) {
+    for (const path of DEFAULT_BEFORE_PATHS) {
       expect(hook!.matcher(makeContext(path))).toBe(true);
     }
   });
@@ -45,12 +52,26 @@ describe("auditLog plugin", () => {
     expect(hook!.matcher(makeContext("/change-password"))).toBe(true);
   });
 
-  test("after hook matcher excludes BEFORE_PATHS", () => {
+  test("after hook matcher excludes default before paths", () => {
     const plugin = auditLog();
     const [hook] = plugin.hooks.after;
-    for (const path of BEFORE_PATHS) {
+    for (const path of DEFAULT_BEFORE_PATHS) {
       expect(hook!.matcher(makeContext(path))).toBe(false);
     }
+  });
+
+  test("custom beforePaths override defaults", () => {
+    const plugin = auditLog({ beforePaths: ["/custom-action"] });
+    const [beforeHook] = plugin.hooks.before;
+    const [afterHook] = plugin.hooks.after;
+
+    // Custom path should be before-only
+    expect(beforeHook!.matcher(makeContext("/custom-action"))).toBe(true);
+    expect(afterHook!.matcher(makeContext("/custom-action"))).toBe(false);
+
+    // Default before path should now be after-only
+    expect(beforeHook!.matcher(makeContext("/sign-out"))).toBe(false);
+    expect(afterHook!.matcher(makeContext("/sign-out"))).toBe(true);
   });
 
   test("paths whitelist restricts which paths are captured", () => {
@@ -89,5 +110,23 @@ describe("auditLog plugin", () => {
     const [limit] = plugin.rateLimit!;
     expect(limit!.pathMatcher("/audit-log/list")).toBe(true);
     expect(limit!.pathMatcher("/sign-in/email")).toBe(false);
+  });
+
+  test("throws if custom storage adapter missing write method", () => {
+    expect(() => auditLog({ storage: {} as any })).toThrow(
+      "must implement write",
+    );
+  });
+
+  test("throws if storage.read is not a function", () => {
+    expect(() =>
+      auditLog({ storage: { write: async () => {}, read: "not-a-fn" } as any }),
+    ).toThrow("storage.read must be a function");
+  });
+
+  test("accepts valid custom storage adapter", () => {
+    expect(() =>
+      auditLog({ storage: { write: async () => {} } }),
+    ).not.toThrow();
   });
 });

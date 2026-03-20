@@ -1,2 +1,2 @@
-export { createBeforeHooks, BEFORE_PATHS } from "./before";
+export { createBeforeHooks } from "./before";
 export { createAfterHooks } from "./after";

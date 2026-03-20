@@ -24,6 +24,8 @@ function makeOpts(overrides: Partial<ResolvedOptions> = {}): ResolvedOptions {
     capture: { ipAddress: true, userAgent: true, requestBody: false },
     piiRedaction: { enabled: false, strategy: "mask" },
     retention: undefined,
+    metadataLimits: { maxBytes: 65536, maxDepth: 5 },
+    beforePaths: ["/sign-out", "/delete-user"],
     beforeLog: undefined,
     afterLog: undefined,
     onWriteError: undefined,
@@ -73,7 +75,7 @@ describe("writeEntry", () => {
     await writeEntry(ctx, makeEntry(), opts, "auditLog");
 
     expect(writeFn).toHaveBeenCalledTimes(1);
-    const written = writeFn.mock.calls[0]![0] as AuditLogEntry;
+    const written = (writeFn.mock.calls[0] as unknown[])[0] as AuditLogEntry;
     expect(written.id).toBeDefined();
     expect(written.action).toBe("sign-in:email");
   });
@@ -102,7 +104,7 @@ describe("writeEntry", () => {
 
     await writeEntry(ctx, makeEntry(), opts, "auditLog");
 
-    const written = writeFn.mock.calls[0]![0] as AuditLogEntry;
+    const written = (writeFn.mock.calls[0] as unknown[])[0] as AuditLogEntry;
     expect(written.action).toBe("modified-action");
   });
 
@@ -149,7 +151,7 @@ describe("writeEntry", () => {
       "DB connection lost",
     );
     expect(onWriteError).toHaveBeenCalledTimes(1);
-    expect(onWriteError.mock.calls[0]![0]).toBe(storageError);
+    expect((onWriteError.mock.calls[0] as unknown[])[0]).toBe(storageError);
   });
 
   test("nonBlocking mode does not block on storage write", async () => {
@@ -231,7 +233,7 @@ describe("writeEntry", () => {
     await writeEntry(ctx, makeEntry(), opts, "auditLog");
 
     expect(afterLog).toHaveBeenCalledTimes(1);
-    const written = afterLog.mock.calls[0]![0] as AuditLogEntry;
+    const written = (afterLog.mock.calls[0] as unknown[])[0] as AuditLogEntry;
     expect(written.id).toBeDefined();
   });
 });

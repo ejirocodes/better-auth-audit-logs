@@ -2,7 +2,7 @@ import { createAuthEndpoint, sessionMiddleware, APIError } from "better-auth/api
 import type { Where } from "better-auth";
 import { z } from "zod";
 import type { AuditLogEntry, ResolvedOptions, StorageReadOptions } from "../types";
-import { parseMetadata } from "../utils";
+import { parseMetadata, redactPII } from "../utils";
 
 export function createListLogsEndpoint(opts: ResolvedOptions, modelName: string) {
   return createAuthEndpoint(
@@ -45,6 +45,20 @@ export function createListLogsEndpoint(opts: ResolvedOptions, modelName: string)
             offset: ctx.query.offset,
           };
           const result = await opts.storage.read(readOpts);
+
+          if (result.entries.length > readOpts.limit) {
+            result.entries = result.entries.slice(0, readOpts.limit);
+          }
+
+          if (opts.piiRedaction.enabled) {
+            for (let i = 0; i < result.entries.length; i++) {
+              result.entries[i] = {
+                ...result.entries[i]!,
+                metadata: await redactPII(result.entries[i]!.metadata, opts.piiRedaction),
+              };
+            }
+          }
+
           return ctx.json(result);
         }
 
@@ -74,10 +88,20 @@ export function createListLogsEndpoint(opts: ResolvedOptions, modelName: string)
           ctx.context.adapter.count({ model: modelName, where }),
         ]);
 
-        const parsed = entries.map((e) => ({
+        let parsed = entries.map((e) => ({
           ...e,
           metadata: parseMetadata(e["metadata"]),
         })) as AuditLogEntry[];
+
+        // SECU-02: Apply PII redaction on read path
+        if (opts.piiRedaction.enabled) {
+          parsed = await Promise.all(
+            parsed.map(async (e) => ({
+              ...e,
+              metadata: await redactPII(e.metadata, opts.piiRedaction),
+            })),
+          );
+        }
 
         return ctx.json({ entries: parsed, total });
       } catch (err) {

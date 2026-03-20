@@ -5,11 +5,27 @@ import type {
   StorageReadResult,
 } from "../types";
 
+export interface MemoryStorageOptions {
+  maxEntries?: number;
+}
+
+const DEFAULT_MAX_ENTRIES = 10_000;
+
 export class MemoryStorage implements AuditLogStorage {
   readonly entries: AuditLogEntry[] = [];
+  private readonly maxEntries: number;
+
+  constructor(opts?: MemoryStorageOptions) {
+    this.maxEntries = opts?.maxEntries ?? DEFAULT_MAX_ENTRIES;
+  }
 
   async write(entry: AuditLogEntry): Promise<void> {
     this.entries.push(entry);
+
+    if (this.entries.length > this.maxEntries) {
+      const excess = this.entries.length - this.maxEntries;
+      this.entries.splice(0, excess);
+    }
   }
 
   async read(opts: StorageReadOptions): Promise<StorageReadResult> {

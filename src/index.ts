@@ -1,5 +1,6 @@
 export { auditLog } from "./plugin";
 export { MemoryStorage } from "./adapters/memory";
+export type { MemoryStorageOptions } from "./adapters/memory";
 export type {
   AuditLogEntry,
   AuditLogOptions,
@@ -12,4 +13,5 @@ export type {
   CaptureOptions,
   PathConfig,
   RetentionConfig,
+  MetadataLimitsConfig,
 } from "./types";
