@@ -6,6 +6,8 @@
 
 Audit log plugin for [Better Auth](https://better-auth.com). Automatically captures auth events with IP, user agent, and severity — zero config required.
 
+**Requires** `better-auth >= 1.0.0` and `typescript >= 5`.
+
 ## Quick start
 
 ```bash
@@ -28,6 +30,83 @@ npx @better-auth/cli generate
 ```
 
 That's it. All auth events are now logged automatically.
+
+## Schema
+
+The plugin adds an `auditLog` table. If you prefer to manage your schema manually, copy the relevant definition:
+
+<details>
+<summary>Prisma</summary>
+
+```prisma
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  action    String
+  status    String
+  severity  String
+  ipAddress String?
+  userAgent String?
+  metadata  String?
+  createdAt DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+  @@map("auditLog")
+}
+```
+
+</details>
+
+<details>
+<summary>Drizzle</summary>
+
+```ts
+import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core";
+import { user } from "./auth-schema"; // your existing user table
+
+export const auditLog = sqliteTable("auditLog", {
+  id: text("id").primaryKey(),
+  userId: text("userId").references(() => user.id, { onDelete: "set null" }),
+  action: text("action").notNull(),
+  status: text("status").notNull(),
+  severity: text("severity").notNull(),
+  ipAddress: text("ipAddress"),
+  userAgent: text("userAgent"),
+  metadata: text("metadata"),
+  createdAt: integer("createdAt", { mode: "timestamp" }).notNull(),
+});
+```
+
+</details>
+
+<details>
+<summary>MongoDB</summary>
+
+```ts
+// Collection: auditLog
+{
+  _id: ObjectId,
+  userId: String | null,       // references user collection
+  action: String,              // e.g. "sign-in:email"
+  status: String,              // "success" | "failed"
+  severity: String,            // "low" | "medium" | "high" | "critical"
+  ipAddress: String | null,
+  userAgent: String | null,
+  metadata: String | null,     // JSON string
+  createdAt: Date
+}
+
+// Recommended indexes
+db.auditLog.createIndex({ userId: 1 })
+db.auditLog.createIndex({ action: 1 })
+db.auditLog.createIndex({ createdAt: 1 })
+```
+
+</details>
 
 ## Client plugin
 
@@ -124,14 +203,10 @@ auditLog({
   },
 
   storage: undefined,        // custom storage backend (see below)
-
-  schema: {
-    auditLog: {
-      modelName: "auditLog", // override the DB model name
-    },
-  },
 })
 ```
+
+To override the DB model name, pass `schema: { auditLog: { modelName: "your_table_name" } }`.
 
 ## Custom storage
 
@@ -174,11 +249,29 @@ Three endpoints are registered under `/audit-log/`, all requiring an active sess
 
 | Endpoint | Method | Description |
 |---|---|---|
-| `/audit-log/list` | `GET` | Paginated entries. Params: `userId`, `action`, `status`, `from`, `to`, `limit` (default 50), `offset` |
+| `/audit-log/list` | `GET` | Paginated entries |
 | `/audit-log/:id` | `GET` | Single entry by ID |
 | `/audit-log/insert` | `POST` | Manually insert a custom event |
 
-## Production
+**Query parameters** for `GET /audit-log/list`:
+
+| Parameter | Type | Default |
+|---|---|---|
+| `userId` | `string` | session user |
+| `action` | `string` | — |
+| `status` | `"success" \| "failed"` | — |
+| `from` | ISO date string | — |
+| `to` | ISO date string | — |
+| `limit` | `number` | `50` (max 500) |
+| `offset` | `number` | `0` |
+
+## Design decisions
+
+- **Entries survive user deletion** — `userId` uses `ON DELETE SET NULL`. Deleting a user does not erase their audit trail.
+- **`userAgent` is not returned in API responses** — stored for forensics but excluded from client queries by default.
+- **Failed sign-ins have `userId: null`** — the user isn't authenticated yet, so there's no session to pull from.
+
+## Recommended production config
 
 ```ts
 auditLog({
