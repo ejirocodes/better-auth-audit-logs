@@ -1,6 +1,6 @@
 import { createAuthEndpoint, sessionMiddleware, APIError } from "better-auth/api";
 import type { AuditLogEntry, ResolvedOptions } from "../types";
-import { parseMetadata } from "../utils";
+import { parseMetadata, redactPII } from "../utils";
 
 export function createGetLogEndpoint(opts: ResolvedOptions, modelName: string) {
   return createAuthEndpoint(
@@ -24,6 +24,11 @@ export function createGetLogEndpoint(opts: ResolvedOptions, modelName: string) {
               message: "Audit log entry not found",
             });
           }
+
+          if (opts.piiRedaction.enabled) {
+            entry.metadata = await redactPII(entry.metadata, opts.piiRedaction);
+          }
+
           return ctx.json(entry);
         }
 
@@ -41,9 +46,16 @@ export function createGetLogEndpoint(opts: ResolvedOptions, modelName: string) {
           });
         }
 
+        let metadata = parseMetadata(record["metadata"]);
+
+        // SECU-02: Apply PII redaction on read path
+        if (opts.piiRedaction.enabled) {
+          metadata = await redactPII(metadata, opts.piiRedaction);
+        }
+
         const entry: AuditLogEntry = {
           ...record,
-          metadata: parseMetadata(record["metadata"]),
+          metadata,
         } as AuditLogEntry;
 
         return ctx.json(entry);

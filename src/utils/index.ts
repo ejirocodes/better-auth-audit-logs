@@ -4,3 +4,4 @@ export { extractRequestMeta } from "./request-meta";
 export { redactPII, DEFAULT_PII_FIELDS } from "./sanitize";
 export { parseMetadata } from "./parse-metadata";
 export { validateEntry } from "./validate-entry";
+export { withRetry } from "./retry";

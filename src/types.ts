@@ -58,14 +58,21 @@ export interface RetentionConfig {
   days: number;
 }
 
+export interface MetadataLimitsConfig {
+  maxBytes?: number;
+  maxDepth?: number;
+}
+
 export interface AuditLogOptions {
   enabled?: boolean;
   nonBlocking?: boolean;
   storage?: AuditLogStorage;
   paths?: (string | { path: string; config?: PathConfig })[];
+  beforePaths?: string[];
   piiRedaction?: PIIRedactionOptions;
   capture?: CaptureOptions;
   retention?: RetentionConfig;
+  metadataLimits?: MetadataLimitsConfig | false;
   schema?: {
     auditLog?: {
       modelName?: string;
@@ -79,6 +86,11 @@ export interface AuditLogOptions {
   onWriteError?: (error: unknown, entry: Omit<AuditLogEntry, "id">) => void;
 }
 
+export interface ResolvedMetadataLimits {
+  maxBytes: number;
+  maxDepth: number;
+}
+
 export interface ResolvedOptions {
   enabled: boolean;
   nonBlocking: boolean;
@@ -86,6 +98,8 @@ export interface ResolvedOptions {
   capture: Required<CaptureOptions>;
   piiRedaction: { enabled: boolean; fields?: string[]; strategy: PIIStrategy };
   retention: RetentionConfig | undefined;
+  metadataLimits: ResolvedMetadataLimits | false;
+  beforePaths: readonly string[];
   beforeLog: AuditLogOptions["beforeLog"];
   afterLog: AuditLogOptions["afterLog"];
   onWriteError: AuditLogOptions["onWriteError"];

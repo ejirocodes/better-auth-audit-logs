@@ -62,3 +62,27 @@ export function buildSchema(options?: AuditLogOptions) {
 export function getModelName(options?: AuditLogOptions): string {
   return options?.schema?.auditLog?.modelName ?? "auditLog";
 }
+
+const CRITICAL_FIELDS = ["userId", "action", "status", "severity", "metadata", "createdAt"] as const;
+
+export function validateSchema(
+  schema: ReturnType<typeof buildSchema>,
+): void {
+  const model = schema.auditLog;
+  if (!model) {
+    throw new Error("[audit-log] Schema must define an auditLog model");
+  }
+
+  const fields = model.fields;
+  if (!fields || typeof fields !== "object") {
+    throw new Error("[audit-log] Schema auditLog model must have fields");
+  }
+
+  for (const field of CRITICAL_FIELDS) {
+    if (!(field in fields)) {
+      throw new Error(
+        `[audit-log] Schema missing critical field: ${field}`,
+      );
+    }
+  }
+}

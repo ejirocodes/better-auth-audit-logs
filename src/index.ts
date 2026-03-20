@@ -12,4 +12,5 @@ export type {
   CaptureOptions,
   PathConfig,
   RetentionConfig,
+  MetadataLimitsConfig,
 } from "./types";

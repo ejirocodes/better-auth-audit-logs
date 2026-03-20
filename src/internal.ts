@@ -11,6 +11,7 @@ import {
   extractRequestMeta,
   redactPII,
   validateEntry,
+  withRetry,
 } from "./utils";
 
 interface BuildParams {
@@ -99,7 +100,6 @@ export async function writeEntry(
   const doFullWrite = async () => {
     let finalEntry = entry;
 
-    // ERRH-03: Validate beforeLog return value
     if (opts.beforeLog) {
       const modified = await opts.beforeLog(finalEntry);
       if (modified === null) return;
@@ -110,13 +110,14 @@ export async function writeEntry(
     }
 
     let written: AuditLogEntry;
-
-    // ERRH-02: Wrap storage calls in try-catch
     try {
-      if (opts.storage) {
-        written = { id: crypto.randomUUID(), ...finalEntry };
-        await opts.storage.write(written);
-      } else {
+      written = await withRetry(async () => {
+        if (opts.storage) {
+          const result: AuditLogEntry = { id: crypto.randomUUID(), ...finalEntry };
+          await opts.storage!.write(result);
+          return result;
+        }
+
         const record = await ctx.context.adapter.create<
           Record<string, unknown>
         >({
@@ -126,14 +127,13 @@ export async function writeEntry(
             metadata: JSON.stringify(finalEntry.metadata),
           },
         });
-        written = {
+        return {
           ...(record as Omit<AuditLogEntry, "metadata">),
           metadata: finalEntry.metadata,
-        };
-      }
+        } as AuditLogEntry;
+      }, { maxRetries: 2, baseDelayMs: 100 });
     } catch (err) {
-      ctx.context.logger?.error("[audit-log] storage write failed", err);
-      // BUGF-04: Notify caller of write failure
+      ctx.context.logger?.error("[audit-log] storage write failed after retries", err);
       opts.onWriteError?.(err, finalEntry);
       throw err;
     }
@@ -141,8 +141,6 @@ export async function writeEntry(
     if (opts.afterLog) await opts.afterLog(written);
   };
 
-  // BUGF-03: In nonBlocking mode, the entire write pipeline (including
-  // beforeLog) runs in the background so it never blocks the auth response.
   if (opts.nonBlocking) {
     ctx.context.runInBackground(
       doFullWrite().catch((err) => {

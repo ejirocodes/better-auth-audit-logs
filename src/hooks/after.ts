@@ -2,14 +2,13 @@ import { createAuthMiddleware } from "better-auth/api";
 import type { HookEndpointContext } from "@better-auth/core";
 import type { AuditLogStatus, ResolvedOptions } from "../types";
 import { buildLogEntry, writeEntry } from "../internal";
-import { BEFORE_PATHS } from "./before";
 
 export function createAfterHooks(opts: ResolvedOptions, modelName: string) {
   return [
     {
       matcher: (context: HookEndpointContext) =>
         !!context.path &&
-        !BEFORE_PATHS.some((p) => context.path!.startsWith(p)) &&
+        !opts.beforePaths.some((p) => context.path!.startsWith(p)) &&
         opts.shouldCapture(context.path!),
 
       handler: createAuthMiddleware(async (ctx) => {

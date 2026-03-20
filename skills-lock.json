@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "skills": {
+    "deep-plan": {
+      "source": "theclaymethod/deep-plan",
+      "sourceType": "github",
+      "computedHash": "7ffb264cbccec64281929a2bf195362ed08da24013644c23d7624c60f3777571"
+    }
+  }
+}

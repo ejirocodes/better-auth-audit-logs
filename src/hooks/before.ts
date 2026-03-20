@@ -3,20 +3,12 @@ import type { HookEndpointContext } from "@better-auth/core";
 import type { ResolvedOptions } from "../types";
 import { buildLogEntry, writeEntry } from "../internal";
 
-export const BEFORE_PATHS = [
-  "/sign-out",
-  "/delete-user",
-  "/revoke-session",
-  "/revoke-sessions",
-  "/revoke-other-sessions",
-] as const;
-
 export function createBeforeHooks(opts: ResolvedOptions, modelName: string) {
   return [
     {
       matcher: (context: HookEndpointContext) =>
         !!context.path &&
-        BEFORE_PATHS.some((p) => context.path!.startsWith(p)) &&
+        opts.beforePaths.some((p) => context.path!.startsWith(p)) &&
         opts.shouldCapture(context.path!),
 
       handler: createAuthMiddleware(async (ctx) => {

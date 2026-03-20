@@ -2,6 +2,7 @@ import { createAuthEndpoint, sessionMiddleware, APIError } from "better-auth/api
 import { z } from "zod";
 import type { ResolvedOptions } from "../types";
 import { buildLogEntryFromAction, writeEntry } from "../internal";
+import { validateMetadataSize } from "../utils/validate-metadata";
 
 export function createInsertLogEndpoint(opts: ResolvedOptions, modelName: string) {
   return createAuthEndpoint(
@@ -19,6 +20,13 @@ export function createInsertLogEndpoint(opts: ResolvedOptions, modelName: string
     async (ctx) => {
       const session = ctx.context.session;
       const { action, status, severity, metadata } = ctx.body;
+
+      if (opts.metadataLimits !== false) {
+        const error = validateMetadataSize(metadata, opts.metadataLimits);
+        if (error) {
+          throw new APIError("BAD_REQUEST", { message: error });
+        }
+      }
 
       try {
         const entry = await buildLogEntryFromAction(action, status, {
