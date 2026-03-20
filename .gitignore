@@ -35,3 +35,12 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 
 # GSD planning docs
 .planning/
+
+# Claude Code / agent tooling
+.agents/
+.claude/
+CLAUDE.md
+skills-lock.json
+
+# docs (generated)
+docs/
