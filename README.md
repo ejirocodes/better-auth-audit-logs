@@ -47,7 +47,7 @@ export const auth = betterAuth({
 npx @better-auth/cli generate
 ```
 
-This adds an `audit_log` table to your database. All columns are indexed for efficient querying.
+This adds an `auditLog` table to your database (or `AuditLog` in Prisma with `@@map` handled automatically). All columns are indexed for efficient querying.
 
 ### 3. Add the client plugin (optional)
 
@@ -134,7 +134,7 @@ auditLog({
 | `beforeLog` | `function` | — | Intercept entries before write. Return `null` to suppress |
 | `afterLog` | `function` | — | Called after each successful write |
 | `storage` | `AuditLogStorage` | — | Custom storage backend |
-| `schema.auditLog.modelName` | `string` | `"audit_log"` | Override the DB table name |
+| `schema.auditLog.modelName` | `string` | `"auditLog"` | Override the DB table/model name |
 | `schema.auditLog.fields` | `Record<string, string>` | — | Rename individual columns |
 
 ### Path-level config
