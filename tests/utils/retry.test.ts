@@ -34,7 +34,7 @@ describe("withRetry", () => {
       }, { maxRetries: 2, baseDelayMs: 10 }),
     ).rejects.toThrow("persistent failure");
 
-    expect(calls).toBe(3); // initial + 2 retries
+    expect(calls).toBe(3);
   });
 
   test("with zero retries, throws immediately", async () => {

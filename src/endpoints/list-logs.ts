@@ -93,7 +93,6 @@ export function createListLogsEndpoint(opts: ResolvedOptions, modelName: string)
           metadata: parseMetadata(e["metadata"]),
         })) as AuditLogEntry[];
 
-        // SECU-02: Apply PII redaction on read path
         if (opts.piiRedaction.enabled) {
           parsed = await Promise.all(
             parsed.map(async (e) => ({
@@ -106,6 +105,7 @@ export function createListLogsEndpoint(opts: ResolvedOptions, modelName: string)
         return ctx.json({ entries: parsed, total });
       } catch (err) {
         if (err instanceof APIError) throw err;
+        ctx.context.logger?.error("[audit-log] list failed", err);
         throw new APIError("INTERNAL_SERVER_ERROR", {
           message: "Failed to retrieve audit logs",
         });

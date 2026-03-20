@@ -60,7 +60,6 @@ function makeCtx(
       },
       options: {},
     },
-    // expose for test assertions
     _backgroundTasks: backgroundTasks,
   } as unknown as GenericEndpointContext & { _backgroundTasks: Promise<unknown>[] };
 }
@@ -169,11 +168,9 @@ describe("writeEntry", () => {
       _backgroundTasks: Promise<unknown>[];
     };
 
-    // writeEntry should return immediately
     await writeEntry(ctx, makeEntry(), opts, "auditLog");
     expect(writeResolved).toBe(false);
 
-    // Wait for the background task to complete
     await Promise.all(ctx._backgroundTasks);
     expect(writeResolved).toBe(true);
   });

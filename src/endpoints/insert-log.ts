@@ -47,6 +47,7 @@ export function createInsertLogEndpoint(opts: ResolvedOptions, modelName: string
         return ctx.json({ success: true });
       } catch (err) {
         if (err instanceof APIError) throw err;
+        ctx.context.logger?.error("[audit-log] insert failed", err);
         throw new APIError("INTERNAL_SERVER_ERROR", {
           message: "Failed to insert audit log entry",
         });

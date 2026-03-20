@@ -65,11 +65,9 @@ describe("auditLog plugin", () => {
     const [beforeHook] = plugin.hooks.before;
     const [afterHook] = plugin.hooks.after;
 
-    // Custom path should be before-only
     expect(beforeHook!.matcher(makeContext("/custom-action"))).toBe(true);
     expect(afterHook!.matcher(makeContext("/custom-action"))).toBe(false);
 
-    // Default before path should now be after-only
     expect(beforeHook!.matcher(makeContext("/sign-out"))).toBe(false);
     expect(afterHook!.matcher(makeContext("/sign-out"))).toBe(true);
   });
