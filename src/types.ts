@@ -76,6 +76,7 @@ export interface AuditLogOptions {
     entry: Omit<AuditLogEntry, "id">,
   ) => Promise<Omit<AuditLogEntry, "id"> | null>;
   afterLog?: (entry: AuditLogEntry) => Promise<void>;
+  onWriteError?: (error: unknown, entry: Omit<AuditLogEntry, "id">) => void;
 }
 
 export interface ResolvedOptions {
@@ -87,6 +88,7 @@ export interface ResolvedOptions {
   retention: RetentionConfig | undefined;
   beforeLog: AuditLogOptions["beforeLog"];
   afterLog: AuditLogOptions["afterLog"];
+  onWriteError: AuditLogOptions["onWriteError"];
   shouldCapture: (path: string) => boolean;
   getPathConfig: (path: string) => PathConfig | undefined;
 }
