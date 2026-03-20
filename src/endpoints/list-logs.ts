@@ -46,6 +46,10 @@ export function createListLogsEndpoint(opts: ResolvedOptions, modelName: string)
           };
           const result = await opts.storage.read(readOpts);
 
+          if (result.entries.length > readOpts.limit) {
+            result.entries = result.entries.slice(0, readOpts.limit);
+          }
+
           if (opts.piiRedaction.enabled) {
             for (let i = 0; i < result.entries.length; i++) {
               result.entries[i] = {

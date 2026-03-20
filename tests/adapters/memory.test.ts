@@ -130,4 +130,24 @@ describe("MemoryStorage", () => {
     expect(store.entries).toHaveLength(1);
     expect(store.entries[0]?.id).toBe(recent.id);
   });
+
+  test("auto-prunes oldest entries when exceeding maxEntries", async () => {
+    const small = new MemoryStorage({ maxEntries: 3 });
+    await small.write(makeEntry({ id: "e1" }));
+    await small.write(makeEntry({ id: "e2" }));
+    await small.write(makeEntry({ id: "e3" }));
+    await small.write(makeEntry({ id: "e4" }));
+
+    expect(small.entries).toHaveLength(3);
+    expect(small.entries[0]?.id).toBe("e2");
+    expect(small.entries[2]?.id).toBe("e4");
+  });
+
+  test("default maxEntries is 10000", async () => {
+    const defaultStore = new MemoryStorage();
+    for (let i = 0; i < 50; i++) {
+      await defaultStore.write(makeEntry());
+    }
+    expect(defaultStore.entries).toHaveLength(50);
+  });
 });
