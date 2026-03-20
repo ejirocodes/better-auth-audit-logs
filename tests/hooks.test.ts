@@ -45,7 +45,6 @@ describe("hook execution", () => {
     const arg = makeHandlerArg("/sign-in/email");
     expect(afterHook!.matcher(arg as unknown as HookEndpointContext)).toBe(true);
 
-    // createAuthMiddleware wraps the handler; call it with the context directly
     await (afterHook!.handler as Function)(arg);
 
     expect(storage.entries).toHaveLength(1);
@@ -76,7 +75,6 @@ describe("hook execution", () => {
     const arg = makeHandlerArg("/sign-out");
     expect(beforeHook!.matcher(arg as unknown as HookEndpointContext)).toBe(true);
 
-    // getSessionFromCtx may fail with our mock, but the hook catches the error
     await (beforeHook!.handler as Function)(arg);
   });
 

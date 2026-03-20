@@ -48,7 +48,6 @@ export function createGetLogEndpoint(opts: ResolvedOptions, modelName: string) {
 
         let metadata = parseMetadata(record["metadata"]);
 
-        // SECU-02: Apply PII redaction on read path
         if (opts.piiRedaction.enabled) {
           metadata = await redactPII(metadata, opts.piiRedaction);
         }
@@ -61,6 +60,7 @@ export function createGetLogEndpoint(opts: ResolvedOptions, modelName: string) {
         return ctx.json(entry);
       } catch (err) {
         if (err instanceof APIError) throw err;
+        ctx.context.logger?.error("[audit-log] get failed", err);
         throw new APIError("INTERNAL_SERVER_ERROR", {
           message: "Failed to retrieve audit log entry",
         });
