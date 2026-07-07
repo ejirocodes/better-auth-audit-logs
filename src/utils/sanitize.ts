@@ -28,10 +28,19 @@ export async function redactPII(
 ): Promise<Record<string, unknown>> {
   if (!config.enabled) return data;
 
-  const fields = config.fields ?? DEFAULT_PII_FIELDS;
   const strategy = config.strategy ?? "mask";
   const result: Record<string, unknown> = { ...data };
 
+  // Step 1: allowlist — drop any key not in `includeFields` entirely.
+  if (config.includeFields) {
+    const keep = new Set(config.includeFields);
+    for (const key of Object.keys(result)) {
+      if (!keep.has(key)) delete result[key];
+    }
+  }
+
+  // Step 2: denylist — apply the strategy to matching keys among the survivors.
+  const fields = config.fields ?? DEFAULT_PII_FIELDS;
   for (const field of fields) {
     if (!(field in result) || result[field] == null) continue;
 

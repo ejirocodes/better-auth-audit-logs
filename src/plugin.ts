@@ -81,8 +81,9 @@ function resolveOptions(options?: AuditLogOptions): ResolvedOptions {
     },
     piiRedaction: {
       enabled: options?.piiRedaction?.enabled ?? false,
-      fields: options?.piiRedaction?.fields,
       strategy: options?.piiRedaction?.strategy ?? "mask",
+      fields: options?.piiRedaction?.fields,
+      includeFields: options?.piiRedaction?.includeFields,
     },
     retention: options?.retention,
     metadataLimits,

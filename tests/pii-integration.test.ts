@@ -147,6 +147,67 @@ describe("PII redaction end-to-end", () => {
     expect(stored.metadata.name).toBe("John");
   });
 
+  test("includeFields allowlist drops stray PII, keeps email", async () => {
+    const storage = new MemoryStorage();
+    const opts = makeOpts({
+      storage,
+      piiRedaction: { enabled: true, strategy: "mask", includeFields: ["email"] },
+    });
+
+    const entry = await buildLogEntryFromAction("custom:action", "success", {
+      userId: "user-1",
+      request: undefined,
+      headers: undefined,
+      metadata: {
+        email: "user@example.com",
+        password: "secret",
+        token: "abc123",
+      },
+      options: opts,
+      authOptions: {},
+    });
+    await writeEntry(makeCtx(), entry, opts, "auditLog");
+
+    const stored = storage.entries[0]!;
+    expect(stored.metadata.email).toBe("user@example.com");
+    expect("token" in stored.metadata).toBe(false);
+    expect("password" in stored.metadata).toBe(false);
+  });
+
+  test("includeFields composes with fields: keep email, redact password, drop the rest", async () => {
+    const storage = new MemoryStorage();
+    const opts = makeOpts({
+      storage,
+      piiRedaction: {
+        enabled: true,
+        strategy: "mask",
+        includeFields: ["email", "password"],
+        fields: ["password"],
+      },
+    });
+
+    const entry = await buildLogEntryFromAction("sign-in:email", "success", {
+      userId: "user-1",
+      request: undefined,
+      headers: undefined,
+      metadata: {
+        email: "user@example.com",
+        password: "secret",
+        token: "abc123",
+        customField: "customValue",
+      },
+      options: opts,
+      authOptions: {},
+    });
+    await writeEntry(makeCtx(), entry, opts, "auditLog");
+
+    const stored = storage.entries[0]!;
+    expect(stored.metadata.email).toBe("user@example.com");
+    expect(stored.metadata.password).toBe("[REDACTED]");
+    expect("token" in stored.metadata).toBe(false);
+    expect("customField" in stored.metadata).toBe(false);
+  });
+
   test("disabled PII redaction passes metadata through unchanged", async () => {
     const storage = new MemoryStorage();
     const opts = makeOpts({

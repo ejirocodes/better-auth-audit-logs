@@ -143,17 +143,17 @@ await authClient.auditLog.insertAuditLog({
 
 All auth `POST` endpoints are captured by default:
 
-| Event | Path | Hook |
-|---|---|---|
-| Sign in | `/sign-in/email`, `/sign-in/social` | after |
-| Sign up | `/sign-up/email` | after |
-| Change/reset password | `/change-password`, `/reset-password` | after |
-| Change email | `/change-email` | after |
-| Two-factor | `/two-factor/*` | after |
-| OAuth callback | `/oauth/callback` | after |
-| Sign out | `/sign-out` | **before** |
-| Delete account | `/delete-user` | **before** |
-| Revoke session | `/revoke-session`, `/revoke-sessions`, `/revoke-other-sessions` | **before** |
+| Event                 | Path                                                            | Hook       |
+| --------------------- | --------------------------------------------------------------- | ---------- |
+| Sign in               | `/sign-in/email`, `/sign-in/social`                             | after      |
+| Sign up               | `/sign-up/email`                                                | after      |
+| Change/reset password | `/change-password`, `/reset-password`                           | after      |
+| Change email          | `/change-email`                                                 | after      |
+| Two-factor            | `/two-factor/*`                                                 | after      |
+| OAuth callback        | `/oauth/callback`                                               | after      |
+| Sign out              | `/sign-out`                                                     | **before** |
+| Delete account        | `/delete-user`                                                  | **before** |
+| Revoke session        | `/revoke-session`, `/revoke-sessions`, `/revoke-other-sessions` | **before** |
 
 "Before" hooks fire for destructive events where the session would be lost after execution.
 
@@ -182,8 +182,12 @@ auditLog({
 
   piiRedaction: {
     enabled: false,          // redact sensitive fields when requestBody is captured
-    strategy: "mask",        // "mask" (***) | "hash" (SHA-256) | "remove" (delete key)
-    fields: ["password"],    // defaults: password, token, secret, apiKey, otp, etc.
+    strategy: "mask",        // "mask" ([REDACTED]) | "hash" (SHA-256) | "remove" (delete key)
+    fields: ["password"],    // keys to redact; defaults: password, token, secret, apiKey, otp, etc.
+    includeFields: [         // optional allowlist: keep ONLY these keys, drop every other key.
+      "email",               // Surviving keys are still redacted per `fields`/defaults —
+      "password",            // here email passes through, password is masked, rest dropped.
+    ],                       // note: [] is a valid allowlist that drops every key.
   },
 
   retention: {

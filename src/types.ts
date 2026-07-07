@@ -38,8 +38,23 @@ export interface AuditLogStorage {
 
 export interface PIIRedactionOptions {
   enabled: boolean;
-  fields?: string[];
+  /**
+   * Redaction strategy to use for the fields listed in `fields`. Defaults to `mask`
+   */
   strategy?: PIIStrategy;
+  /**
+   * List of top-level keys to redact. When omitted/undefined, it defaults to a set of common PII fields
+   */
+  fields?: string[];
+  /**
+   * Allowlist of top-level keys to keep. When set, any key __NOT__ in this list is
+   * removed entirely; surviving keys are still subject to `fields` redaction.
+   *
+   * An empty array (`[]`) is a valid allowlist that removes every key.
+   *
+   * Default is no keys are removed, all keys are kept and subject to redaction if listed in `fields`.
+   */
+  includeFields?: string[];
 }
 
 export interface CaptureOptions {
@@ -96,7 +111,12 @@ export interface ResolvedOptions {
   nonBlocking: boolean;
   storage: AuditLogStorage | undefined;
   capture: Required<CaptureOptions>;
-  piiRedaction: { enabled: boolean; fields?: string[]; strategy: PIIStrategy };
+  piiRedaction: {
+    enabled: boolean;
+    strategy: PIIStrategy;
+    fields?: string[];
+    includeFields?: string[];
+  };
   retention: RetentionConfig | undefined;
   metadataLimits: ResolvedMetadataLimits | false;
   beforePaths: readonly string[];
