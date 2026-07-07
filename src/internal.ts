@@ -107,7 +107,7 @@ export async function writeEntry(
     let finalEntry = entry;
 
     if (opts.beforeLog) {
-      const modified = await opts.beforeLog(finalEntry);
+      const modified = await opts.beforeLog(finalEntry, ctx);
       if (modified === null) return;
 
       const validated = validateEntry(modified, ctx.context.logger);
