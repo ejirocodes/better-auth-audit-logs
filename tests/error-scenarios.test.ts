@@ -2,7 +2,7 @@ import { describe, test, expect, mock } from "bun:test";
 import { writeEntry } from "../src/internal";
 import { parseMetadata } from "../src/utils/parse-metadata";
 import type { AuditLogEntry, ResolvedOptions } from "../src/types";
-import type { GenericEndpointContext } from "@better-auth/core";
+import type { GenericEndpointContext } from "better-auth";
 
 function makeEntry(): Omit<AuditLogEntry, "id"> {
   return {

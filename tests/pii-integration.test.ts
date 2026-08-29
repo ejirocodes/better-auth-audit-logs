@@ -2,7 +2,7 @@ import { describe, test, expect, mock } from "bun:test";
 import { MemoryStorage } from "../src/adapters/memory";
 import { writeEntry, buildLogEntryFromAction } from "../src/internal";
 import type { ResolvedOptions } from "../src/types";
-import type { GenericEndpointContext } from "@better-auth/core";
+import type { GenericEndpointContext } from "better-auth";
 
 function makeOpts(overrides: Partial<ResolvedOptions> = {}): ResolvedOptions {
   return {

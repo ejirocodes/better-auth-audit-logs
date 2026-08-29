@@ -1,7 +1,7 @@
 import { describe, test, expect, mock, beforeEach } from "bun:test";
 import { MemoryStorage } from "../src/adapters/memory";
 import { auditLog } from "../src/plugin";
-import type { HookEndpointContext } from "@better-auth/core";
+import type { HookEndpointContext } from "better-auth";
 
 describe("hook execution", () => {
   let storage: MemoryStorage;

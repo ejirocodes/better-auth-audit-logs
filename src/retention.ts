@@ -1,5 +1,4 @@
-import type { Where } from "better-auth";
-import type { GenericEndpointContext } from "@better-auth/core";
+import type { GenericEndpointContext, Where } from "better-auth";
 import type { AuditLogStorage } from "./types";
 import { DEFAULT_MODEL_NAME } from "./schema";
 
