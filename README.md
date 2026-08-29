@@ -6,7 +6,7 @@
 
 Audit log plugin for [Better Auth](https://better-auth.com). Automatically captures auth events with IP, user agent, and severity — zero config required.
 
-**Requires** `better-auth >= 1.0.0` and `typescript >= 5`.
+**Requires** `better-auth >= 1.4.18` (1.4, 1.5, 1.6 and 1.7 are supported) and `typescript >= 5`.
 
 ## Quick start
 

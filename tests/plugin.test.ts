@@ -1,6 +1,6 @@
 import { describe, test, expect } from "bun:test";
 import { auditLog } from "../src/plugin";
-import type { HookEndpointContext } from "@better-auth/core";
+import type { HookEndpointContext } from "better-auth";
 
 const DEFAULT_BEFORE_PATHS = [
   "/sign-out",

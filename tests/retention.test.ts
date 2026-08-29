@@ -1,6 +1,5 @@
 import { describe, test, expect, mock } from "bun:test";
-import type { GenericEndpointContext } from "@better-auth/core";
-import type { Where } from "better-auth";
+import type { GenericEndpointContext, Where } from "better-auth";
 import { auditLog, resolveOptions } from "../src/plugin";
 import {
   createRetentionSweep,

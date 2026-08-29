@@ -1,0 +1,90 @@
+name: Test
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Lockfile
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Assert no undeclared @better-auth/core imports
+        run: |
+          if grep -rq "@better-auth/core" src tests; then
+            grep -rn "@better-auth/core" src tests
+            echo "::error::@better-auth/core is not a declared dependency - import these types from better-auth"
+            exit 1
+          fi
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Typecheck
+        run: bun run typecheck
+
+      - name: Test
+        run: bun test
+
+      - name: Build
+        run: bun run build
+
+  compat:
+    name: better-auth ${{ matrix.better-auth }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        better-auth:
+          - "1.4.18"
+          - "1.4"
+          - "1.5"
+          - "1.6"
+          - "1.7"
+          - latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Install better-auth ${{ matrix.better-auth }}
+        run: bun add -d better-auth@${{ matrix.better-auth }}
+
+      - name: Verify the requested better-auth version was installed
+        run: |
+          resolved=$(node -p "require('./node_modules/better-auth/package.json').version")
+          requested='${{ matrix.better-auth }}'
+          echo "better-auth resolved to $resolved"
+          if [ "$requested" != "latest" ] && [ "${resolved#"$requested"}" = "$resolved" ]; then
+            echo "::error::expected better-auth $requested, resolved $resolved"
+            exit 1
+          fi
+
+      - name: Typecheck
+        run: bun run typecheck
+
+      - name: Test
+        run: bun test
