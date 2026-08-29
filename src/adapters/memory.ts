@@ -1,6 +1,7 @@
 import type {
   AuditLogEntry,
   AuditLogStorage,
+  ChainReadOptions,
   StorageReadOptions,
   StorageReadResult,
 } from "../types";
@@ -45,6 +46,18 @@ export class MemoryStorage implements AuditLogStorage {
       .slice(opts.offset, opts.offset + opts.limit);
 
     return { entries: filtered, total };
+  }
+
+  async readChain(opts: ChainReadOptions): Promise<AuditLogEntry[]> {
+    return this.entries
+      .filter((e) => {
+        if (opts.userId !== undefined && e.userId !== opts.userId) return false;
+        if (opts.from !== undefined && e.createdAt < opts.from) return false;
+        if (opts.to !== undefined && e.createdAt > opts.to) return false;
+        return true;
+      })
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+      .slice(opts.offset, opts.offset + opts.limit);
   }
 
   async readById(id: string): Promise<AuditLogEntry | null> {

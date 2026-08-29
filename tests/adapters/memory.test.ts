@@ -150,4 +150,36 @@ describe("MemoryStorage", () => {
     }
     expect(defaultStore.entries).toHaveLength(50);
   });
+
+  test("readChain returns entries newest first", async () => {
+    await store.write(makeEntry({ id: "old", createdAt: new Date("2026-01-01") }));
+    await store.write(makeEntry({ id: "new", createdAt: new Date("2026-01-02") }));
+
+    const chain = await store.readChain({ limit: 10, offset: 0 });
+
+    expect(chain.map((e) => e.id)).toEqual(["new", "old"]);
+  });
+
+  test("readChain scopes to one user, and null selects entries with no user", async () => {
+    await store.write(makeEntry({ id: "u1", userId: "user-1" }));
+    await store.write(makeEntry({ id: "u2", userId: "user-2" }));
+    await store.write(makeEntry({ id: "anon", userId: null }));
+
+    expect((await store.readChain({ userId: "user-2", limit: 10, offset: 0 })).map((e) => e.id))
+      .toEqual(["u2"]);
+    expect((await store.readChain({ userId: null, limit: 10, offset: 0 })).map((e) => e.id))
+      .toEqual(["anon"]);
+    expect(await store.readChain({ limit: 10, offset: 0 })).toHaveLength(3);
+  });
+
+  test("readChain honours date bounds, limit, and offset", async () => {
+    await store.write(makeEntry({ id: "a", createdAt: new Date("2026-01-01") }));
+    await store.write(makeEntry({ id: "b", createdAt: new Date("2026-01-02") }));
+    await store.write(makeEntry({ id: "c", createdAt: new Date("2026-01-03") }));
+
+    expect(
+      (await store.readChain({ from: new Date("2026-01-02"), limit: 10, offset: 0 })).map((e) => e.id),
+    ).toEqual(["c", "b"]);
+    expect((await store.readChain({ limit: 1, offset: 1 })).map((e) => e.id)).toEqual(["b"]);
+  });
 });

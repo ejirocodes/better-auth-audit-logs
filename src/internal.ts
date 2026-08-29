@@ -115,11 +115,10 @@ export async function writeEntry(
       finalEntry = validated;
     }
 
-    let written: AuditLogEntry;
-    try {
-      written = await withRetry(async () => {
+    const persist = (candidate: Omit<AuditLogEntry, "id">) =>
+      withRetry(async () => {
         if (opts.storage) {
-          const result: AuditLogEntry = { id: crypto.randomUUID(), ...finalEntry };
+          const result: AuditLogEntry = { id: crypto.randomUUID(), ...candidate };
           await opts.storage!.write(result);
           return result;
         }
@@ -129,15 +128,21 @@ export async function writeEntry(
         >({
           model: modelName,
           data: {
-            ...finalEntry,
-            metadata: JSON.stringify(finalEntry.metadata),
+            ...candidate,
+            metadata: JSON.stringify(candidate.metadata),
           },
         });
         return {
           ...(record as Omit<AuditLogEntry, "metadata">),
-          metadata: finalEntry.metadata,
+          metadata: candidate.metadata,
         } as AuditLogEntry;
       }, { maxRetries: 2, baseDelayMs: 100 });
+
+    let written: AuditLogEntry;
+    try {
+      written = opts.appendToChain
+        ? await opts.appendToChain(ctx, finalEntry, persist)
+        : await persist(finalEntry);
     } catch (err) {
       ctx.context.logger?.error("[audit-log] storage write failed after retries", err);
       opts.onWriteError?.(err, finalEntry);

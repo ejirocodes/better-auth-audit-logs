@@ -66,6 +66,7 @@ function makeOpts(overrides: Partial<ResolvedOptions> = {}): ResolvedOptions {
     capture: { ipAddress: true, userAgent: true, requestBody: false },
     piiRedaction: { enabled: false, strategy: "mask" },
     sweepRetention: undefined,
+    appendToChain: undefined,
     metadataLimits: { maxBytes: 65536, maxDepth: 5 },
     beforePaths: [],
     beforeLog: undefined,
@@ -339,6 +340,7 @@ describe("retention sweeps during writes", () => {
     const { ctx, settle } = makeCtx();
     (ctx.context as { runInBackground: unknown }).runInBackground = undefined;
     const opts = makeOpts({
+      appendToChain: undefined,
       sweepRetention: createRetentionSweep({
         days: 90,
         intervalMs: 0,
@@ -365,6 +367,7 @@ describe("retention sweeps during writes", () => {
   test("a write triggers the sweep", async () => {
     const { ctx, deleteMany, settle } = makeCtx();
     const opts = makeOpts({
+      appendToChain: undefined,
       sweepRetention: createRetentionSweep({
         days: 90,
         intervalMs: 60_000,
@@ -384,6 +387,7 @@ describe("retention sweeps during writes", () => {
       throw new Error("connection reset");
     });
     const opts = makeOpts({
+      appendToChain: undefined,
       sweepRetention: createRetentionSweep({
         days: 90,
         intervalMs: 0,

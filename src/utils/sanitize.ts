@@ -1,4 +1,5 @@
 import type { PIIRedactionOptions } from "../types";
+import { toHex } from "./hex";
 
 export const DEFAULT_PII_FIELDS = [
   "password",
@@ -16,10 +17,7 @@ export const DEFAULT_PII_FIELDS = [
 
 async function sha256(value: string): Promise<string> {
   const encoded = new TextEncoder().encode(value);
-  const buffer = await crypto.subtle.digest("SHA-256", encoded);
-  return Array.from(new Uint8Array(buffer))
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
+  return toHex(await crypto.subtle.digest("SHA-256", encoded));
 }
 
 export async function redactPII(

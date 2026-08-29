@@ -50,6 +50,10 @@ model AuditLog {
   metadata  String?
   createdAt DateTime @default(now())
 
+  // only needed with tamperDetection enabled
+  hash         String?
+  previousHash String?
+
   user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([userId])
@@ -78,6 +82,9 @@ export const auditLog = sqliteTable("auditLog", {
   userAgent: text("userAgent"),
   metadata: text("metadata"),
   createdAt: integer("createdAt", { mode: "timestamp" }).notNull(),
+  // only needed with tamperDetection enabled
+  hash: text("hash"),
+  previousHash: text("previousHash"),
 });
 ```
 
@@ -97,7 +104,9 @@ export const auditLog = sqliteTable("auditLog", {
   ipAddress: String | null,
   userAgent: String | null,
   metadata: String | null,     // JSON string
-  createdAt: Date
+  createdAt: Date,
+  hash: String | null,         // only with tamperDetection enabled
+  previousHash: String | null
 }
 
 // Recommended indexes
@@ -192,6 +201,12 @@ auditLog({
     intervalMs: 86_400_000,  // minimum gap between cleanups (default 24h)
   },
 
+  tamperDetection: {
+    enabled: false,          // sign each entry into a hash chain
+    scope: "user",           // "user" (one chain per user) | "global" (one chain for everything)
+    secret: undefined,       // defaults to a key derived from Better Auth's secret
+  },
+
   // intercept before write — return null to suppress
   beforeLog: async (entry) => {
     if (entry.userId === "service-account") return null;
@@ -235,6 +250,74 @@ A custom storage backend must implement `deleteOlderThan(date)` before retention
 
 Cleanup issues a single unbounded `DELETE` over everything past the cutoff. If you are enabling retention on a table that has been accumulating for a long time, run `deleteExpiredAuditLogs` once from a script before turning on the automatic sweep, so the first large delete does not land alongside a live request.
 
+## Tamper evidence
+
+A compliance audit (SOC 2, HIPAA) asks you to prove an audit trail is complete and unmodified. With `tamperDetection.enabled`, every entry is signed with HMAC-SHA256 over its own fields plus the signature of the entry written before it. Editing a row invalidates its own signature; deleting one breaks the link its successor holds.
+
+```ts
+auditLog({
+  tamperDetection: {
+    enabled: true,
+    scope: "user",
+    secret: process.env.AUDIT_CHAIN_SECRET,
+  },
+})
+```
+
+Enabling it adds two nullable columns, `hash` and `previousHash` — re-run `npx @better-auth/cli generate`. Entries written before you turned it on keep a null `hash`, and verification counts them as `unchained` rather than failing on them.
+
+### Verifying
+
+```ts
+import { verifyAuditLogChain } from "better-auth-audit-logs";
+
+const report = await verifyAuditLogChain(await auth.$context);
+
+if (!report.ok) {
+  await alerting.page("audit log integrity check failed", report.findings);
+}
+```
+
+```ts
+{
+  ok: true,            // false only for `modified` or `orphaned` findings
+  chains: 412,         // chains covered — one per user under `scope: "user"`
+  entriesChecked: 9_120,
+  unchained: 300,      // entries written before tamper detection was enabled
+  findings: [],
+}
+```
+
+Each finding carries the entry it was raised on and the predecessor it expected:
+
+| `type` | Meaning |
+|---|---|
+| `modified` | The entry's contents no longer match its signature. Tampering. |
+| `orphaned` | An entry has been removed from the middle of a chain. Tampering. |
+| `truncated` | The oldest entry in range links further back — what retention or a `from` bound leaves behind. Not a failure. |
+| `forked` | Two entries claim the same predecessor. Concurrent writers, not tampering. Not a failure. |
+
+Pass `from`/`to` to bound a run, `userId` to check one user, `storage` and `modelName` to match your `auditLog()` config, and `scope` to match the scope you write with. Verification loads the range into memory, so bound it on large tables.
+
+### What it protects against
+
+The signature is keyed, not a bare SHA-256 hash, and the key lives in your app's environment rather than in the database. That is the whole point: an attacker who reaches only the database — a stolen dump, SQL injection, a rogue DBA — cannot recompute a valid signature, so they cannot rewrite history undetected. A bare hash chain would let them re-hash the entries they touched and leave the chain intact.
+
+Chain structure proves no entry was altered or removed from the middle of a chain. It cannot prove the trail was not cut short at the head — deleting the newest entries leaves a shorter chain that still verifies. Nor does it defend against anyone holding the app's secret or running code in the app process. Closing either gap requires the trail to leave the database: forward entries to append-only storage from `afterLog`, or publish the chain head on a schedule somewhere you do not control.
+
+The key is derived from Better Auth's `secret` with a domain separator, so it cannot be used to forge anything else that secret signs. Set `tamperDetection.secret` to key the chain independently — rotating it invalidates every existing signature, so treat it as permanent.
+
+### Concurrency
+
+Each write reads its chain's head before signing. Writes to the same chain are serialized inside a process, so a single instance never forks. Across instances two writers can read the same head and produce a `forked` pair — real, but not evidence of tampering, and it never hides a `modified` finding. `scope: "user"` is the default because a single user's requests rarely land on two instances at once; `scope: "global"` gives one continuous chain and forks under any concurrency.
+
+### Retention and user deletion
+
+Both rewrite history by design, and verification sees them:
+
+- **Retention** trims the oldest entries, so the surviving chain start reports as `truncated`. A deletion of only the very oldest entries is indistinguishable from that, and reports the same way.
+- **Deleting a user** sets `userId` to null on their entries (`ON DELETE SET NULL`), which changes signed content and reports as `modified`. If you need erasure alongside tamper evidence, pseudonymize `userId` in `beforeLog` at write time so there is nothing to null out later.
+
 ## Custom storage
 
 Route writes to any external backend instead of Better Auth's database:
@@ -252,6 +335,8 @@ const clickhouse: AuditLogStorage = {
   // Optional — enables the query endpoints to work with your backend
   async read(options) { /* ... */ },
   async readById(id) { /* ... */ },
+  // Required by tamperDetection — entries newest first
+  async readChain(options) { /* ... */ },
 };
 
 auditLog({ storage: clickhouse })
@@ -296,7 +381,7 @@ Three endpoints are registered under `/audit-log/`, all requiring an active sess
 
 - **Entries survive user deletion** — `userId` uses `ON DELETE SET NULL`. Deleting a user does not erase their audit trail.
 - **`userAgent` is not returned in API responses** — stored for forensics but excluded from client queries by default.
-- **Failed sign-ins have `userId: null`** — the user isn't authenticated yet, so there's no session to pull from.
+- **Failed sign-ins have `userId: null`** — the user isn't authenticated yet, so there's no session to pull from. Under `scope: "user"` they share one chain, so a credential-stuffing burst is still covered by tamper evidence.
 
 ## Recommended production config
 
@@ -305,6 +390,7 @@ auditLog({
   nonBlocking: true,
   piiRedaction: { enabled: true, strategy: "hash" },
   retention: { enabled: true, days: 90 },
+  tamperDetection: { enabled: true },
   afterLog: async (entry) => {
     if (entry.severity === "critical" || entry.severity === "high") {
       await alerting.emit(entry);
