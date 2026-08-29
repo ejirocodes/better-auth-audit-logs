@@ -108,6 +108,61 @@ describe("writeEntry", () => {
     expect(written.action).toBe("modified-action");
   });
 
+  test("beforeLog receives ctx as its second argument", async () => {
+    let received: unknown;
+    const opts = makeOpts({
+      storage: { write: mock(async () => {}) },
+      beforeLog: async (entry, ctx) => {
+        received = ctx;
+        return entry;
+      },
+    });
+    const ctx = makeCtx();
+
+    await writeEntry(ctx, makeEntry(), opts, "auditLog");
+
+    expect(received).toBe(ctx);
+  });
+
+  test("beforeLog can add a metadata field (custom storage)", async () => {
+    const writeFn = mock(async () => {});
+    const opts = makeOpts({
+      storage: { write: writeFn },
+      beforeLog: async (entry) => ({
+        ...entry,
+        metadata: { ...entry.metadata, organizationId: "org-1" },
+      }),
+    });
+    const ctx = makeCtx();
+
+    await writeEntry(ctx, makeEntry(), opts, "auditLog");
+
+    const written = (writeFn.mock.calls[0] as unknown[])[0] as AuditLogEntry;
+    expect(written.metadata.organizationId).toBe("org-1");
+  });
+
+  test("beforeLog metadata field is persisted through the adapter", async () => {
+    const createFn = mock(async () => ({
+      id: "adapter-id",
+      ...makeEntry(),
+      metadata: "{}",
+    }));
+    const ctx = makeCtx({ create: createFn });
+    const opts = makeOpts({
+      beforeLog: async (entry) => ({
+        ...entry,
+        metadata: { ...entry.metadata, organizationId: "org-1" },
+      }),
+    });
+
+    await writeEntry(ctx, makeEntry(), opts, "auditLog");
+
+    const arg = (createFn.mock.calls[0] as unknown[])[0] as {
+      data: { metadata: string };
+    };
+    expect(JSON.parse(arg.data.metadata).organizationId).toBe("org-1");
+  });
+
   test("beforeLog returning null skips the write", async () => {
     const writeFn = mock(async () => {});
     const opts = makeOpts({

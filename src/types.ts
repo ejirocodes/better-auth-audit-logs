@@ -1,5 +1,6 @@
 import type { RetentionSweep } from "./retention";
 import type { AppendToChain } from "./tamper";
+import type { GenericEndpointContext } from "better-auth";
 
 export type AuditLogStatus = "success" | "failed";
 export type AuditLogSeverity = "low" | "medium" | "high" | "critical";
@@ -112,6 +113,7 @@ export interface AuditLogOptions {
   };
   beforeLog?: (
     entry: Omit<AuditLogEntry, "id">,
+    ctx: GenericEndpointContext,
   ) => Promise<Omit<AuditLogEntry, "id"> | null>;
   afterLog?: (entry: AuditLogEntry) => Promise<void>;
   onWriteError?: (error: unknown, entry: Omit<AuditLogEntry, "id">) => void;
