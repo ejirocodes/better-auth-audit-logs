@@ -39,7 +39,9 @@ export async function buildLogEntry(
   };
 
   const { ipAddress, userAgent } = extractRequestMeta(
-    captureOpts.ipAddress !== false ? params.request : undefined,
+    captureOpts.ipAddress !== false
+      ? (params.request ?? params.headers)
+      : undefined,
     captureOpts.userAgent !== false ? params.headers : undefined,
     params.authOptions,
   );
@@ -69,7 +71,9 @@ export async function buildLogEntryFromAction(
   const severity = inferSeverity(action, status);
 
   const { ipAddress, userAgent } = extractRequestMeta(
-    params.options.capture.ipAddress !== false ? params.request : undefined,
+    params.options.capture.ipAddress !== false
+      ? (params.request ?? params.headers)
+      : undefined,
     params.options.capture.userAgent !== false ? params.headers : undefined,
     params.authOptions,
   );

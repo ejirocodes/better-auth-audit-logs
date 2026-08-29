@@ -1,13 +1,25 @@
-import { getIp } from "better-auth/api";
+import * as betterAuthApi from "better-auth/api";
 import type { BetterAuthOptions } from "better-auth";
 
+type IpResolver = (
+  source: Request | Headers,
+  options: BetterAuthOptions,
+) => string | null;
+
+const { getIP, getIp } = betterAuthApi as typeof betterAuthApi & {
+  getIP?: IpResolver;
+  getIp?: IpResolver;
+};
+
+const resolveIp = getIP ?? getIp;
+
 export function extractRequestMeta(
-  request: Request | undefined,
+  ipSource: Request | Headers | undefined,
   headers: Headers | undefined,
   options: BetterAuthOptions,
 ): { ipAddress: string | null; userAgent: string | null } {
   return {
-    ipAddress: request ? (getIp(request, options) ?? null) : null,
+    ipAddress: ipSource ? (resolveIp(ipSource, options) ?? null) : null,
     userAgent: headers?.get("user-agent") ?? null,
   };
 }
