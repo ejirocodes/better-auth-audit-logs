@@ -1,3 +1,5 @@
+import type { RetentionSweep } from "./retention";
+
 export type AuditLogStatus = "success" | "failed";
 export type AuditLogSeverity = "low" | "medium" | "high" | "critical";
 export type PIIStrategy = "mask" | "hash" | "remove";
@@ -56,6 +58,8 @@ export interface PathConfig {
 export interface RetentionConfig {
   enabled: boolean;
   days: number;
+  /** Minimum gap between automatic cleanup sweeps. Defaults to 24 hours. */
+  intervalMs?: number;
 }
 
 export interface MetadataLimitsConfig {
@@ -97,7 +101,7 @@ export interface ResolvedOptions {
   storage: AuditLogStorage | undefined;
   capture: Required<CaptureOptions>;
   piiRedaction: { enabled: boolean; fields?: string[]; strategy: PIIStrategy };
-  retention: RetentionConfig | undefined;
+  sweepRetention: RetentionSweep | undefined;
   metadataLimits: ResolvedMetadataLimits | false;
   beforePaths: readonly string[];
   beforeLog: AuditLogOptions["beforeLog"];

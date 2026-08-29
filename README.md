@@ -187,8 +187,9 @@ auditLog({
   },
 
   retention: {
-    enabled: false,          // enable scheduled cleanup
+    enabled: false,          // delete old entries as auth traffic comes in
     days: 90,                // delete entries older than N days
+    intervalMs: 86_400_000,  // minimum gap between cleanups (default 24h)
   },
 
   // intercept before write — return null to suppress
@@ -207,6 +208,32 @@ auditLog({
 ```
 
 To override the DB model name, pass `schema: { auditLog: { modelName: "your_table_name" } }`.
+
+## Retention
+
+With `retention.enabled`, the plugin deletes entries older than `retention.days` while it writes new ones. The cleanup is throttled to one run per `intervalMs` per process (24 hours by default), runs in the background, and never blocks or fails an auth request — a failed cleanup is logged and retried on the next sweep.
+
+Because the sweep rides on auth traffic, an instance that receives no auth requests never cleans up. Call `deleteExpiredAuditLogs` from your own scheduler when you need cleanup on a fixed cadence, or when you would rather keep it off the request path entirely:
+
+```ts
+import { deleteExpiredAuditLogs } from "better-auth-audit-logs";
+
+const deleted = await deleteExpiredAuditLogs(await auth.$context, { days: 90 });
+```
+
+Pass `modelName` if you renamed the table, and `storage` if you use a custom backend:
+
+```ts
+await deleteExpiredAuditLogs(await auth.$context, {
+  days: 90,
+  modelName: "audit_trail",
+  storage: clickhouse,
+});
+```
+
+A custom storage backend must implement `deleteOlderThan(date)` before retention can be enabled — the plugin throws at startup otherwise, rather than silently keeping logs forever.
+
+Cleanup issues a single unbounded `DELETE` over everything past the cutoff. If you are enabling retention on a table that has been accumulating for a long time, run `deleteExpiredAuditLogs` once from a script before turning on the automatic sweep, so the first large delete does not land alongside a live request.
 
 ## Custom storage
 

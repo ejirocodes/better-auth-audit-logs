@@ -24,7 +24,7 @@ function makeOpts(overrides: Partial<ResolvedOptions> = {}): ResolvedOptions {
     storage: undefined,
     capture: { ipAddress: true, userAgent: true, requestBody: false },
     piiRedaction: { enabled: false, strategy: "mask" },
-    retention: undefined,
+    sweepRetention: undefined,
     metadataLimits: { maxBytes: 65536, maxDepth: 5 },
     beforePaths: ["/sign-out"],
     beforeLog: undefined,
