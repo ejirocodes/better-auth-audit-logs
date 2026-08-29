@@ -30,6 +30,14 @@ describe("inferSeverity", () => {
     expect(inferSeverity("change-password", "success")).toBe("medium");
   });
 
+  test("low for api-key:verify success", () => {
+    expect(inferSeverity("api-key:verify", "success")).toBe("low");
+  });
+
+  test("high for api-key:verify failure", () => {
+    expect(inferSeverity("api-key:verify", "failed")).toBe("high");
+  });
+
   test("low for unknown actions", () => {
     expect(inferSeverity("custom:action", "success")).toBe("low");
   });
