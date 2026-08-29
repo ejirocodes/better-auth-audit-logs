@@ -101,6 +101,8 @@ export async function writeEntry(
   opts: ResolvedOptions,
   modelName: string,
 ): Promise<void> {
+  opts.sweepRetention?.(ctx);
+
   const doFullWrite = async () => {
     let finalEntry = entry;
 

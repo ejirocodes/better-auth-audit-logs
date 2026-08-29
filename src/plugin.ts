@@ -1,5 +1,6 @@
 import type { BetterAuthPlugin } from "better-auth";
 import { buildSchema, getModelName, validateSchema } from "./schema";
+import { createRetentionSweep, DEFAULT_RETENTION_INTERVAL_MS } from "./retention";
 import { createBeforeHooks, createAfterHooks } from "./hooks";
 import {
   createListLogsEndpoint,
@@ -49,7 +50,34 @@ function validateStorageAdapter(storage: AuditLogOptions["storage"]): void {
   }
 }
 
-function resolveOptions(options?: AuditLogOptions): ResolvedOptions {
+function validateRetention(options?: AuditLogOptions): void {
+  const retention = options?.retention;
+  if (!retention?.enabled) return;
+
+  if (!Number.isFinite(retention.days) || retention.days < 1) {
+    throw new Error(
+      "[audit-log] retention.days must be a finite number of at least 1",
+    );
+  }
+
+  if (
+    retention.intervalMs !== undefined &&
+    (!Number.isFinite(retention.intervalMs) || retention.intervalMs < 0)
+  ) {
+    throw new Error(
+      "[audit-log] retention.intervalMs must be a non-negative finite number",
+    );
+  }
+
+  if (options?.storage && !options.storage.deleteOlderThan) {
+    throw new Error(
+      "[audit-log] retention requires storage.deleteOlderThan — implement it on your storage adapter or disable retention",
+    );
+  }
+}
+
+export function resolveOptions(options?: AuditLogOptions): ResolvedOptions {
+  const enabled = options?.enabled ?? true;
   const pathsMap = new Map<string, PathConfig | undefined>();
   const hasPaths = (options?.paths?.length ?? 0) > 0;
 
@@ -71,7 +99,7 @@ function resolveOptions(options?: AuditLogOptions): ResolvedOptions {
         };
 
   return {
-    enabled: options?.enabled ?? true,
+    enabled,
     nonBlocking: options?.nonBlocking ?? false,
     storage: options?.storage,
     capture: {
@@ -84,7 +112,16 @@ function resolveOptions(options?: AuditLogOptions): ResolvedOptions {
       fields: options?.piiRedaction?.fields,
       strategy: options?.piiRedaction?.strategy ?? "mask",
     },
-    retention: options?.retention,
+    sweepRetention:
+      enabled && options?.retention?.enabled
+        ? createRetentionSweep({
+            days: options.retention.days,
+            intervalMs:
+              options.retention.intervalMs ?? DEFAULT_RETENTION_INTERVAL_MS,
+            storage: options.storage,
+            modelName: getModelName(options),
+          })
+        : undefined,
     metadataLimits,
     beforePaths: options?.beforePaths ?? DEFAULT_BEFORE_PATHS,
     beforeLog: options?.beforeLog,
@@ -97,6 +134,7 @@ function resolveOptions(options?: AuditLogOptions): ResolvedOptions {
 
 export function auditLog(options?: AuditLogOptions) {
   validateStorageAdapter(options?.storage);
+  validateRetention(options);
 
   const schema = buildSchema(options);
   validateSchema(schema);

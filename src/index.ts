@@ -1,5 +1,10 @@
 export { auditLog } from "./plugin";
 export { MemoryStorage } from "./adapters/memory";
+export { deleteExpiredAuditLogs } from "./retention";
+export type {
+  AuditLogRetentionContext,
+  DeleteExpiredAuditLogsOptions,
+} from "./retention";
 export type { MemoryStorageOptions } from "./adapters/memory";
 export type {
   AuditLogEntry,

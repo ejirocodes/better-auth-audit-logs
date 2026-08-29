@@ -1,9 +1,11 @@
 import { mergeSchema } from "better-auth/db";
 import type { AuditLogOptions } from "./types";
 
+export const DEFAULT_MODEL_NAME = "auditLog";
+
 export const baseSchema = {
   auditLog: {
-    modelName: "auditLog",
+    modelName: DEFAULT_MODEL_NAME,
     fields: {
       userId: {
         type: "string" as const,
@@ -60,7 +62,7 @@ export function buildSchema(options?: AuditLogOptions) {
 }
 
 export function getModelName(options?: AuditLogOptions): string {
-  return options?.schema?.auditLog?.modelName ?? "auditLog";
+  return options?.schema?.auditLog?.modelName ?? DEFAULT_MODEL_NAME;
 }
 
 const CRITICAL_FIELDS = ["userId", "action", "status", "severity", "metadata", "createdAt"] as const;
