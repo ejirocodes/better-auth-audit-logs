@@ -54,7 +54,8 @@
     "build": "bun build src/index.ts src/client.ts --outdir dist --target node --external better-auth --external zod && bun build src/index.ts src/client.ts --outdir dist --target node --format cjs --entry-naming '[dir]/[name].cjs' --external better-auth --external zod && tsc -p tsconfig.build.json",
     "test": "bun test",
     "typecheck": "tsc --noEmit",
-    "check": "tsc --noEmit && bun test"
+    "check": "tsc --noEmit && bun test",
+    "prepublishOnly": "bun run check && bun run build"
   },
   "peerDependencies": {
     "better-auth": ">=1.4.18 <2",
