@@ -2,6 +2,7 @@ import type { BetterAuthPlugin } from "better-auth";
 import { buildSchema, getModelName, validateSchema } from "./schema";
 import { createRetentionSweep, DEFAULT_RETENTION_INTERVAL_MS } from "./retention";
 import { createBeforeHooks, createAfterHooks } from "./hooks";
+import { createAppendToChain } from "./tamper";
 import {
   createListLogsEndpoint,
   createGetLogEndpoint,
@@ -48,6 +49,12 @@ function validateStorageAdapter(storage: AuditLogOptions["storage"]): void {
       "[audit-log] storage.deleteOlderThan must be a function if provided",
     );
   }
+
+  if (storage.readChain !== undefined && typeof storage.readChain !== "function") {
+    throw new Error(
+      "[audit-log] storage.readChain must be a function if provided",
+    );
+  }
 }
 
 function validateRetention(options?: AuditLogOptions): void {
@@ -72,6 +79,16 @@ function validateRetention(options?: AuditLogOptions): void {
   if (options?.storage && !options.storage.deleteOlderThan) {
     throw new Error(
       "[audit-log] retention requires storage.deleteOlderThan — implement it on your storage adapter or disable retention",
+    );
+  }
+}
+
+function validateTamperDetection(options?: AuditLogOptions): void {
+  if (!options?.tamperDetection?.enabled) return;
+
+  if (options.storage && !options.storage.readChain) {
+    throw new Error(
+      "[audit-log] tamperDetection requires storage.readChain — implement it on your storage adapter or disable tamper detection",
     );
   }
 }
@@ -122,6 +139,17 @@ export function resolveOptions(options?: AuditLogOptions): ResolvedOptions {
             modelName: getModelName(options),
           })
         : undefined,
+    appendToChain:
+      enabled && options?.tamperDetection?.enabled
+        ? createAppendToChain(
+            {
+              scope: options.tamperDetection.scope ?? "user",
+              secret: options.tamperDetection.secret,
+            },
+            getModelName(options),
+            options.storage,
+          )
+        : undefined,
     metadataLimits,
     beforePaths: options?.beforePaths ?? DEFAULT_BEFORE_PATHS,
     beforeLog: options?.beforeLog,
@@ -135,9 +163,10 @@ export function resolveOptions(options?: AuditLogOptions): ResolvedOptions {
 export function auditLog(options?: AuditLogOptions) {
   validateStorageAdapter(options?.storage);
   validateRetention(options);
+  validateTamperDetection(options);
 
   const schema = buildSchema(options);
-  validateSchema(schema);
+  validateSchema(schema, options);
 
   const modelName = getModelName(options);
   const resolved = resolveOptions(options);

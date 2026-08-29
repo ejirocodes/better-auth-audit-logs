@@ -57,8 +57,28 @@ export const baseSchema = {
   },
 };
 
+const chainFields = {
+  hash: {
+    type: "string" as const,
+    required: false,
+  },
+  previousHash: {
+    type: "string" as const,
+    required: false,
+  },
+};
+
 export function buildSchema(options?: AuditLogOptions) {
-  return mergeSchema(baseSchema, options?.schema);
+  const base = options?.tamperDetection?.enabled
+    ? {
+        auditLog: {
+          ...baseSchema.auditLog,
+          fields: { ...baseSchema.auditLog.fields, ...chainFields },
+        },
+      }
+    : baseSchema;
+
+  return mergeSchema(base, options?.schema);
 }
 
 export function getModelName(options?: AuditLogOptions): string {
@@ -69,6 +89,7 @@ const CRITICAL_FIELDS = ["userId", "action", "status", "severity", "metadata", "
 
 export function validateSchema(
   schema: ReturnType<typeof buildSchema>,
+  options?: AuditLogOptions,
 ): void {
   const model = schema.auditLog;
   if (!model) {
@@ -80,7 +101,11 @@ export function validateSchema(
     throw new Error("[audit-log] Schema auditLog model must have fields");
   }
 
-  for (const field of CRITICAL_FIELDS) {
+  const required = options?.tamperDetection?.enabled
+    ? [...CRITICAL_FIELDS, ...Object.keys(chainFields)]
+    : CRITICAL_FIELDS;
+
+  for (const field of required) {
     if (!(field in fields)) {
       throw new Error(
         `[audit-log] Schema missing critical field: ${field}`,

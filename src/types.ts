@@ -1,4 +1,5 @@
 import type { RetentionSweep } from "./retention";
+import type { AppendToChain } from "./tamper";
 
 export type AuditLogStatus = "success" | "failed";
 export type AuditLogSeverity = "low" | "medium" | "high" | "critical";
@@ -14,6 +15,10 @@ export interface AuditLogEntry {
   userAgent: string | null;
   metadata: Record<string, unknown>;
   createdAt: Date;
+  /** Chain signature over this entry. Present only with tamper detection on. */
+  hash?: string | null;
+  /** Signature of the entry written before this one in the same chain. */
+  previousHash?: string | null;
 }
 
 export interface StorageReadOptions {
@@ -31,11 +36,22 @@ export interface StorageReadResult {
   total: number;
 }
 
+export interface ChainReadOptions {
+  /** Omitted reads every chain; `null` reads the chain of entries with no user. */
+  userId?: string | null;
+  from?: Date;
+  to?: Date;
+  limit: number;
+  offset: number;
+}
+
 export interface AuditLogStorage {
   write(entry: AuditLogEntry): Promise<void>;
   read?(options: StorageReadOptions): Promise<StorageReadResult>;
   readById?(id: string): Promise<AuditLogEntry | null>;
   deleteOlderThan?(date: Date): Promise<number>;
+  /** Required by tamper detection. Must return entries newest first. */
+  readChain?(options: ChainReadOptions): Promise<AuditLogEntry[]>;
 }
 
 export interface PIIRedactionOptions {
@@ -62,6 +78,16 @@ export interface RetentionConfig {
   intervalMs?: number;
 }
 
+export type TamperDetectionScope = "user" | "global";
+
+export interface TamperDetectionConfig {
+  enabled: boolean;
+  /** One chain per user (default), or a single chain across every entry. */
+  scope?: TamperDetectionScope;
+  /** Defaults to a key derived from Better Auth's `secret`. */
+  secret?: string;
+}
+
 export interface MetadataLimitsConfig {
   maxBytes?: number;
   maxDepth?: number;
@@ -76,6 +102,7 @@ export interface AuditLogOptions {
   piiRedaction?: PIIRedactionOptions;
   capture?: CaptureOptions;
   retention?: RetentionConfig;
+  tamperDetection?: TamperDetectionConfig;
   metadataLimits?: MetadataLimitsConfig | false;
   schema?: {
     auditLog?: {
@@ -90,6 +117,11 @@ export interface AuditLogOptions {
   onWriteError?: (error: unknown, entry: Omit<AuditLogEntry, "id">) => void;
 }
 
+export interface ResolvedTamperDetection {
+  scope: TamperDetectionScope;
+  secret: string | undefined;
+}
+
 export interface ResolvedMetadataLimits {
   maxBytes: number;
   maxDepth: number;
@@ -102,6 +134,7 @@ export interface ResolvedOptions {
   capture: Required<CaptureOptions>;
   piiRedaction: { enabled: boolean; fields?: string[]; strategy: PIIStrategy };
   sweepRetention: RetentionSweep | undefined;
+  appendToChain: AppendToChain | undefined;
   metadataLimits: ResolvedMetadataLimits | false;
   beforePaths: readonly string[];
   beforeLog: AuditLogOptions["beforeLog"];
