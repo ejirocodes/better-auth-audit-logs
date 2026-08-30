@@ -106,15 +106,16 @@ describe("deleteExpiredAuditLogs", () => {
 
     const deleted = await deleteExpiredAuditLogs(ctx.context, { days: 30 });
 
+    const after = Date.now();
     expect(deleted).toBe(3);
     const { model, where } = deleteMany.mock.calls[0]![0];
     expect(model).toBe("auditLog");
     expect(where).toHaveLength(1);
     expect(where[0]!.field).toBe("createdAt");
     expect(where[0]!.operator).toBe("lt");
-    expect((where[0]!.value as Date).getTime()).toBeLessThanOrEqual(
-      before - 30 * DAY_MS,
-    );
+    const cutoff = (where[0]!.value as Date).getTime();
+    expect(cutoff).toBeGreaterThanOrEqual(before - 30 * DAY_MS);
+    expect(cutoff).toBeLessThanOrEqual(after - 30 * DAY_MS);
   });
 
   test("honours a custom model name", async () => {
