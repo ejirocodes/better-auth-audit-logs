@@ -129,7 +129,9 @@ export async function writeEntry(
           model: modelName,
           data: {
             ...candidate,
-            metadata: JSON.stringify(candidate.metadata),
+            metadata: opts.metadataFormat === "object"
+              ? candidate.metadata
+              : JSON.stringify(candidate.metadata),
           },
         });
         return {

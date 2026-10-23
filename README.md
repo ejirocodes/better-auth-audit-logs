@@ -176,12 +176,16 @@ All options are optional:
 auditLog({
   enabled: true,             // disable without removing the plugin
   nonBlocking: false,        // fire-and-forget — never blocks auth responses
+  disableEndpoints: false,   // skip /audit-log/* endpoints and their rate limits
+  metadataFormat: "string", // "string" for text columns | "object" for JSON/JSONB
 
   // restrict to specific paths (empty = capture all)
   paths: [
     "/sign-in/email",
     { path: "/delete-user", config: { severity: "high", capture: { requestBody: true } } },
   ],
+
+  excludePaths: [],         // skip matching path segments, even if included in paths
 
   capture: {
     ipAddress: true,         // capture client IP
@@ -222,6 +226,26 @@ auditLog({
   storage: undefined,        // custom storage backend (see below)
 })
 ```
+
+`excludePaths` defaults to `[]` and matches paths at segment boundaries before
+either hook captures data (`/api-key` excludes `/api-key/verify`, but not `/api-keys-admin`).
+For example, `excludePaths: ["/api-key/", "/get-session"]` keeps the default
+capture-everything behavior for other paths. Exclusions take precedence over `paths`.
+
+Set `disableEndpoints: true` to register no `/audit-log/*` REST endpoints or rate
+limits while keeping capture hooks active. You can expose reads through your own
+admin-authorized layer. The default is `false`.
+
+`metadataFormat` defaults to `"string"`: metadata is serialized with
+`JSON.stringify` before `adapter.create`, preserving the existing write behavior
+for the generated text-column schema. Set `metadataFormat: "object"` when your
+adapter uses native JSON/JSONB columns, so fields stay queryable (for example,
+PostgreSQL `metadata->>'keyId'`). This option changes the value passed to the
+adapter, not the generated column type; configure your JSON column separately.
+Reads safely accept both objects and legacy JSON strings. Custom storage adapters
+always receive metadata objects, regardless of this setting. Tamper detection
+retains its existing canonical hash format for both representations, including
+chains that span legacy and new rows.
 
 To override the DB model name, pass `schema: { auditLog: { modelName: "your_table_name" } }`.
 

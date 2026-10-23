@@ -99,12 +99,22 @@ export interface AuditLogOptions {
   nonBlocking?: boolean;
   storage?: AuditLogStorage;
   paths?: (string | { path: string; config?: PathConfig })[];
+  /** Path prefixes to skip at segment boundaries, even when included in paths. Defaults to []. */
+  excludePaths?: string[];
+  /** Disable all /audit-log/* endpoints and their rate limits. Defaults to false. */
+  disableEndpoints?: boolean;
   beforePaths?: string[];
   piiRedaction?: PIIRedactionOptions;
   capture?: CaptureOptions;
   retention?: RetentionConfig;
   tamperDetection?: TamperDetectionConfig;
   metadataLimits?: MetadataLimitsConfig | false;
+  /**
+   * Metadata format passed to the database adapter. Defaults to "string" for
+   * text columns; opt into "object" for native JSON/JSONB columns.
+   * Custom storage adapters always receive objects.
+   */
+  metadataFormat?: "string" | "object";
   schema?: {
     auditLog?: {
       modelName?: string;
@@ -138,6 +148,7 @@ export interface ResolvedOptions {
   sweepRetention: RetentionSweep | undefined;
   appendToChain: AppendToChain | undefined;
   metadataLimits: ResolvedMetadataLimits | false;
+  metadataFormat: "string" | "object";
   beforePaths: readonly string[];
   beforeLog: AuditLogOptions["beforeLog"];
   afterLog: AuditLogOptions["afterLog"];

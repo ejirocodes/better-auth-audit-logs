@@ -1,5 +1,6 @@
 import { describe, test, expect, mock } from "bun:test";
 import { writeEntry } from "../src/internal";
+import { resolveOptions } from "../src/plugin";
 import type { AuditLogEntry, ResolvedOptions } from "../src/types";
 import type { GenericEndpointContext } from "better-auth";
 
@@ -26,6 +27,7 @@ function makeOpts(overrides: Partial<ResolvedOptions> = {}): ResolvedOptions {
     sweepRetention: undefined,
     appendToChain: undefined,
     metadataLimits: { maxBytes: 65536, maxDepth: 5 },
+    metadataFormat: "string",
     beforePaths: ["/sign-out", "/delete-user"],
     beforeLog: undefined,
     afterLog: undefined,
@@ -80,18 +82,22 @@ describe("writeEntry", () => {
     expect(written.action).toBe("sign-in:email");
   });
 
-  test("writes to adapter when no custom storage", async () => {
+  test.each([undefined, "object"] as const)("writes adapter metadata with format=%s", async (metadataFormat) => {
     const createFn = mock(async () => ({
       id: "adapter-id",
       ...makeEntry(),
       metadata: "{}",
     }));
     const ctx = makeCtx({ create: createFn });
-    const opts = makeOpts();
+    const opts = resolveOptions({ metadataFormat });
+    const entry = { ...makeEntry(), metadata: { keyId: "key-1" } };
 
-    await writeEntry(ctx, makeEntry(), opts, "auditLog");
+    await writeEntry(ctx, entry, opts, "auditLog");
 
     expect(createFn).toHaveBeenCalledTimes(1);
+    const arg = (createFn.mock.calls[0] as unknown[])[0] as { data: { metadata: unknown } };
+    expect(arg.data.metadata).toEqual(metadataFormat === "object"
+      ? entry.metadata : JSON.stringify(entry.metadata));
   });
 
   test("beforeLog can modify the entry", async () => {
@@ -141,7 +147,8 @@ describe("writeEntry", () => {
     expect(written.metadata.organizationId).toBe("org-1");
   });
 
-  test("beforeLog metadata field is persisted through the adapter", async () => {
+  test("beforeLog metadata is persisted and preserved for afterLog", async () => {
+    let written: AuditLogEntry | undefined;
     const createFn = mock(async () => ({
       id: "adapter-id",
       ...makeEntry(),
@@ -149,6 +156,7 @@ describe("writeEntry", () => {
     }));
     const ctx = makeCtx({ create: createFn });
     const opts = makeOpts({
+      afterLog: async (entry) => { written = entry; },
       beforeLog: async (entry) => ({
         ...entry,
         metadata: { ...entry.metadata, organizationId: "org-1" },
@@ -161,6 +169,7 @@ describe("writeEntry", () => {
       data: { metadata: string };
     };
     expect(JSON.parse(arg.data.metadata).organizationId).toBe("org-1");
+    expect(written?.metadata).toEqual({ organizationId: "org-1" });
   });
 
   test("beforeLog returning null skips the write", async () => {

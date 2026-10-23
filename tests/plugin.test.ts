@@ -128,3 +128,39 @@ describe("auditLog plugin", () => {
     ).not.toThrow();
   });
 });
+
+
+describe("consumer capture controls", () => {
+  test("disableEndpoints omits endpoints and rate limits while retaining hooks", () => {
+    const plugin = auditLog({ disableEndpoints: true });
+    expect(Object.keys(plugin.endpoints)).toEqual([]);
+    expect(plugin.rateLimit).toEqual([]);
+    expect(plugin.hooks.after[0]!.matcher(makeContext("/sign-in/email"))).toBe(true);
+  });
+
+  test("exclusions match segments in both hooks before capture", () => {
+    const plugin = auditLog({ excludePaths: ["/api-key/delete", "/sign-out"] });
+    expect(plugin.hooks.after[0]!.matcher(makeContext("/api-key/delete/expired"))).toBe(false);
+    expect(plugin.hooks.before[0]!.matcher(makeContext("/sign-out"))).toBe(false);
+    expect(plugin.hooks.after[0]!.matcher(makeContext("/sign-in/email"))).toBe(true);
+  });
+
+  test("exclusions respect path segment boundaries", () => {
+    const plugin = auditLog({ excludePaths: ["/api-key"] });
+    const hook = plugin.hooks.after[0]!;
+    expect(hook.matcher(makeContext("/api-key"))).toBe(false);
+    expect(hook.matcher(makeContext("/api-key/verify"))).toBe(false);
+    expect(hook.matcher(makeContext("/api-keys-admin"))).toBe(true);
+  });
+
+  test("exclusions win over the explicit path list", () => {
+    const plugin = auditLog({
+      paths: ["/sign-in/email", "/sign-up/email"],
+      excludePaths: ["/sign-in/"],
+    });
+    const hook = plugin.hooks.after[0]!;
+    expect(hook.matcher(makeContext("/sign-in/email"))).toBe(false);
+    expect(hook.matcher(makeContext("/sign-up/email"))).toBe(true);
+    expect(hook.matcher(makeContext("/change-password"))).toBe(false);
+  });
+});

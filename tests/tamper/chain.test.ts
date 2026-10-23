@@ -2,7 +2,7 @@ import { describe, test, expect, mock } from "bun:test";
 import type { GenericEndpointContext } from "better-auth";
 import { auditLog, resolveOptions } from "../../src/plugin";
 import { writeEntry } from "../../src/internal";
-import { selectHead } from "../../src/tamper";
+import { selectHead, verifyAuditLogChain } from "../../src/tamper";
 import { computeEntryHash } from "../../src/tamper";
 import { MemoryStorage } from "../../src/adapters/memory";
 import type { AuditLogEntry, AuditLogStorage } from "../../src/types";
@@ -229,4 +229,43 @@ describe("plugin configuration", () => {
 
     expect(resolved.appendToChain).toBeUndefined();
   });
+});
+
+
+test("extends and verifies a legacy text chain with object metadata writes", async () => {
+  const legacy = makeEntry({
+    metadata: { keyId: "old-key", nested: { z: 1, a: [2, 3] } },
+    createdAt: new Date("2026-01-01"),
+  });
+  const legacyHash = await computeEntryHash(legacy, null, SECRET);
+  const rows: Record<string, unknown>[] = [{
+    ...legacy, id: "legacy", hash: legacyHash, previousHash: null,
+    metadata: JSON.stringify(legacy.metadata),
+  }];
+  const ctx = makeCtx();
+  const create = mock(async ({ data }: { data: Record<string, unknown> }) => {
+    const row = { ...data, id: "new" };
+    rows.push(row);
+    return row;
+  });
+  const findMany = mock(async () => [...rows].reverse());
+  Object.assign(ctx.context.adapter, { create, findMany });
+  const next = makeEntry({
+    metadata: { keyId: "new-key" },
+    createdAt: new Date("2026-01-02"),
+  });
+  await writeEntry(ctx, next,
+    resolveOptions({ metadataFormat: "object", tamperDetection: { enabled: true } }), "auditLog");
+  expect(rows[1]!.previousHash).toBe(legacyHash);
+  expect(rows[1]!.metadata).toEqual({ keyId: "new-key" });
+  // The same entry must have the same signature in every storage format.
+  expect(rows[1]!.hash).toBe(await computeEntryHash(next, legacyHash, SECRET));
+  const report = await verifyAuditLogChain({ secret: SECRET, adapter: ctx.context.adapter });
+  expect(report.ok).toBe(true);
+  expect(report.entriesChecked).toBe(2);
+  expect(report.findings).toEqual([]);
+
+  // Reordering keys as JSONB does must not invalidate the legacy signature.
+  rows[0]!.metadata = { nested: { a: [2, 3], z: 1 }, keyId: "old-key" };
+  expect((await verifyAuditLogChain({ secret: SECRET, adapter: ctx.context.adapter })).ok).toBe(true);
 });

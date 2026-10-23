@@ -27,6 +27,7 @@ function makeOpts(overrides: Partial<ResolvedOptions> = {}): ResolvedOptions {
     sweepRetention: undefined,
     appendToChain: undefined,
     metadataLimits: { maxBytes: 65536, maxDepth: 5 },
+    metadataFormat: "string",
     beforePaths: ["/sign-out"],
     beforeLog: undefined,
     afterLog: undefined,

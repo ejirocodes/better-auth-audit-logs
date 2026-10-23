@@ -97,6 +97,7 @@ export function resolveOptions(options?: AuditLogOptions): ResolvedOptions {
   const enabled = options?.enabled ?? true;
   const pathsMap = new Map<string, PathConfig | undefined>();
   const hasPaths = (options?.paths?.length ?? 0) > 0;
+  const excludePaths = options?.excludePaths ?? [];
 
   for (const p of options?.paths ?? []) {
     if (typeof p === "string") {
@@ -151,11 +152,16 @@ export function resolveOptions(options?: AuditLogOptions): ResolvedOptions {
           )
         : undefined,
     metadataLimits,
+    metadataFormat: options?.metadataFormat ?? "string",
     beforePaths: options?.beforePaths ?? DEFAULT_BEFORE_PATHS,
     beforeLog: options?.beforeLog,
     afterLog: options?.afterLog,
     onWriteError: options?.onWriteError,
-    shouldCapture: (path: string) => !hasPaths || pathsMap.has(path),
+    shouldCapture: (path: string) =>
+      !excludePaths.some((prefix) =>
+        path === prefix || path.startsWith(prefix.endsWith("/") ? prefix : prefix + "/"),
+      ) &&
+      (!hasPaths || pathsMap.has(path)),
     getPathConfig: (path: string) => pathsMap.get(path),
   };
 }
@@ -182,11 +188,13 @@ export function auditLog(options?: AuditLogOptions) {
       after: afterHooks,
     },
     endpoints: {
-      listAuditLogs: createListLogsEndpoint(resolved, modelName),
-      getAuditLog: createGetLogEndpoint(resolved, modelName),
-      insertAuditLog: createInsertLogEndpoint(resolved, modelName),
+      ...(options?.disableEndpoints ? {} : {
+        listAuditLogs: createListLogsEndpoint(resolved, modelName),
+        getAuditLog: createGetLogEndpoint(resolved, modelName),
+        insertAuditLog: createInsertLogEndpoint(resolved, modelName),
+      }),
     },
-    rateLimit: [
+    rateLimit: options?.disableEndpoints ? [] : [
       {
         pathMatcher: (path: string) => path.startsWith("/audit-log/"),
         window: 60,
