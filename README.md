@@ -186,7 +186,7 @@ auditLog({
   capture: {
     ipAddress: true,         // capture client IP
     userAgent: true,         // capture User-Agent header
-    requestBody: false,      // include request body in metadata
+    requestBody: false,      // include request body in metadata (except /api-key/*)
   },
 
   piiRedaction: {
@@ -222,6 +222,22 @@ auditLog({
   storage: undefined,        // custom storage backend (see below)
 })
 ```
+
+API key request bodies (`/api-key/*`) are always omitted, even when
+`capture.requestBody` is enabled. Verification records allowlisted key ID, name,
+and prefix fields, resolves the user from the returned key when no session is
+available, and logs `{ valid: false }` as a failure even with an HTTP 200 response.
+Redirects without an `error` query parameter in their Location are successful.
+OAuth callback and email-verification redirects containing `?error=...` are logged
+as failures with that error code.
+
+When enabled, PII redaction walks nested objects and arrays with the same field
+list and strategy as the top level, including nested fields in stored rows read
+through the list/get endpoints. The top-level `error` subtree is reserved for
+plugin diagnostics and is not traversed, so `error.code` remains useful. A separate
+safety cap of 32 bounds traversal independently of `metadataLimits`, including
+when validation is disabled; deeper objects become `"[MaxDepth]"` and cycles become
+`"[Circular]"`. Input objects are not mutated.
 
 To override the DB model name, pass `schema: { auditLog: { modelName: "your_table_name" } }`.
 

@@ -3,6 +3,12 @@ import type { HookEndpointContext } from "better-auth";
 import type { AuditLogStatus, ResolvedOptions } from "../types";
 import { buildLogEntry, writeEntry } from "../internal";
 
+type VerifyReturned = {
+  valid?: boolean;
+  key?: { id?: string; userId?: string; name?: string; prefix?: string } | null;
+  error?: { code?: string; message?: string } | null;
+};
+
 export function createAfterHooks(opts: ResolvedOptions, modelName: string) {
   return [
     {
@@ -14,23 +20,38 @@ export function createAfterHooks(opts: ResolvedOptions, modelName: string) {
       handler: createAuthMiddleware(async (ctx) => {
         try {
           const path = ctx.path!;
-          const isError = ctx.context.returned instanceof Error;
-          const status: AuditLogStatus = isError ? "failed" : "success";
+          const returned = ctx.context.returned;
+          const statusCode = returned instanceof Response
+            ? returned.status
+            : (returned as { statusCode?: number } | undefined)?.statusCode;
+          const isRedirect = statusCode !== undefined && statusCode >= 300 && statusCode < 400;
+          const location = isRedirect
+            ? new Headers((returned as { headers?: ConstructorParameters<typeof Headers>[0] }).headers).get("location")
+            : null;
+          const redirectError = location
+            ? new URL(location, "http://localhost").searchParams.get("error")
+            : null;
+          const isError = returned instanceof Error && !isRedirect;
+          let status: AuditLogStatus = isError || redirectError !== null ? "failed" : "success";
 
           const user =
             ctx.context.newSession?.user ?? ctx.context.session?.user;
+          let userId = user?.id ?? null;
 
           const pathConfig = opts.getPathConfig(path);
 
           const metadata: Record<string, unknown> = {};
 
-          if (opts.capture.requestBody && ctx.body) {
+          // API key request bodies can contain plaintext keys, even on CRUD paths.
+          if ((pathConfig?.capture?.requestBody ?? opts.capture.requestBody) && !path.startsWith("/api-key/") && ctx.body) {
             metadata.requestBody = ctx.body as Record<string, unknown>;
           }
 
-          if (isError) {
+          if (redirectError !== null) {
+            metadata.error = { code: redirectError };
+          } else if (isError) {
             const err = ctx.context.returned as Error & {
-              status?: number;
+              status?: string;
               code?: string;
             };
             metadata.error = {
@@ -40,8 +61,28 @@ export function createAfterHooks(opts: ResolvedOptions, modelName: string) {
             };
           }
 
+          if (path === "/api-key/verify" && status === "success" && returned) {
+            const verification = returned as VerifyReturned;
+            if (verification.valid === false) {
+              status = "failed";
+              if (verification.error) {
+                metadata.error = {
+                  ...(verification.error.code !== undefined && { code: verification.error.code }),
+                  ...(verification.error.message !== undefined && { message: verification.error.message }),
+                };
+              }
+            }
+            userId ??= verification.key?.userId ?? null;
+            if (verification.key) {
+              const key = verification.key;
+              if (key.id !== undefined) metadata.keyId = key.id;
+              if (key.name !== undefined) metadata.keyName = key.name;
+              if (key.prefix !== undefined) metadata.keyPrefix = key.prefix;
+            }
+          }
+
           const entry = await buildLogEntry(path, status, {
-            userId: user?.id ?? null,
+            userId,
             request: ctx.request,
             headers: ctx.headers,
             metadata,
