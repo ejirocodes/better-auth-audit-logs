@@ -3,6 +3,19 @@ import type { HookEndpointContext } from "better-auth";
 import type { AuditLogStatus, ResolvedOptions } from "../types";
 import { buildLogEntry, writeEntry } from "../internal";
 
+// Explicitly allowlisted identifiers only; never copy credentials or tokens.
+export const IDENTIFIER_BODY_FIELDS: Record<string, readonly string[]> = {
+  "/sign-in/email": ["email"],
+  "/sign-up/email": ["email", "name"],
+  "/sign-in/social": ["provider"],
+  "/sign-in/username": ["username"],
+  "/forget-password": ["email"],
+  "/send-verification-email": ["email"],
+  "/change-email": ["newEmail"],
+  "/request-password-reset": ["email"],
+  "/two-factor/send-otp": ["email"],
+};
+
 export function createAfterHooks(opts: ResolvedOptions, modelName: string) {
   return [
     {
@@ -24,7 +37,18 @@ export function createAfterHooks(opts: ResolvedOptions, modelName: string) {
 
           const metadata: Record<string, unknown> = {};
 
-          if (opts.capture.requestBody && ctx.body) {
+          const captureIdentifiers = pathConfig?.capture?.identifiers ?? opts.capture.identifiers;
+          if (captureIdentifiers && ctx.body && typeof ctx.body === "object") {
+            const body = ctx.body as Record<string, unknown>;
+            for (const field of IDENTIFIER_BODY_FIELDS[path] ?? []) {
+              const value = body[field];
+              if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
+                metadata[field] = value;
+              }
+            }
+          }
+
+          if ((pathConfig?.capture?.requestBody ?? opts.capture.requestBody) && ctx.body) {
             metadata.requestBody = ctx.body as Record<string, unknown>;
           }
 

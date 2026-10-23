@@ -22,7 +22,7 @@ function makeOpts(overrides: Partial<ResolvedOptions> = {}): ResolvedOptions {
     enabled: true,
     nonBlocking: false,
     storage: undefined,
-    capture: { ipAddress: true, userAgent: true, requestBody: false },
+    capture: { ipAddress: true, userAgent: true, requestBody: false, identifiers: false },
     piiRedaction: { enabled: false, strategy: "mask" },
     sweepRetention: undefined,
     appendToChain: undefined,

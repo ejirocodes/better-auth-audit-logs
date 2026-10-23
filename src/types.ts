@@ -65,6 +65,8 @@ export interface CaptureOptions {
   ipAddress?: boolean;
   userAgent?: boolean;
   requestBody?: boolean;
+  /** Capture allowlisted sign-in/account identifiers as PII, independently of requestBody. Defaults to false. */
+  identifiers?: boolean;
 }
 
 export interface PathConfig {

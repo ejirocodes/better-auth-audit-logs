@@ -123,6 +123,7 @@ export function resolveOptions(options?: AuditLogOptions): ResolvedOptions {
       ipAddress: options?.capture?.ipAddress ?? true,
       userAgent: options?.capture?.userAgent ?? true,
       requestBody: options?.capture?.requestBody ?? false,
+      identifiers: options?.capture?.identifiers ?? false,
     },
     piiRedaction: {
       enabled: options?.piiRedaction?.enabled ?? false,

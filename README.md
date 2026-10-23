@@ -187,6 +187,7 @@ auditLog({
     ipAddress: true,         // capture client IP
     userAgent: true,         // capture User-Agent header
     requestBody: false,      // include request body in metadata
+    identifiers: false,      // opt in to allowlisted account identifiers (PII)
   },
 
   piiRedaction: {
@@ -222,6 +223,16 @@ auditLog({
   storage: undefined,        // custom storage backend (see below)
 })
 ```
+
+`capture.identifiers` defaults to `false`. Enable it to record allowlisted body
+identifiers for sign-in/sign-up, password-reset, email-verification/change, and
+two-factor OTP flows: `email`, `name`, `provider`, `username`, and `newEmail`,
+as applicable to the path. It operates independently of `capture.requestBody`.
+
+Only primitive string, number, or boolean values are copied. This can identify
+failed attempts with no session; it stores PII, so enable it intentionally and
+configure `piiRedaction.fields` if needed. Per-path `capture.identifiers` overrides
+the global setting. No identifier fields are extracted for other paths.
 
 To override the DB model name, pass `schema: { auditLog: { modelName: "your_table_name" } }`.
 
